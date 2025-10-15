@@ -1,0 +1,16 @@
+﻿@model POETWeb.Models.Domain.Classroom
+@{
+    ViewData["Title"] = "Delete Class";
+}
+<h3>Delete class</h3>
+
+<div class="alert alert-warning">
+    Are you sure you want to delete the class
+    <strong>@Model.Name</strong> (<code>@Model.ClassCode</code>)?
+</div>
+
+<form asp-action="Delete" method="post">
+    <input type="hidden" asp-for="Id" />
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a class="btn btn-secondary" asp-action="Index">Cancel</a>
+</form>

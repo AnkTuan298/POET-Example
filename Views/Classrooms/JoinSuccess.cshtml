@@ -1,0 +1,13 @@
+﻿@{
+    ViewData["Title"] = "Joined Successfully";
+}
+
+<div class="text-center mt-5">
+    <h2>🎉 You’ve successfully joined <b>@ViewBag.ClassName</b>!</h2>
+    <p class="text-muted mt-3">You can now explore your class materials or return to your dashboard.</p>
+
+    <div class="mt-4">
+        <a class="btn btn-primary me-3" asp-controller="Classrooms" asp-action="Details" asp-route-id="@ViewBag.ClassId">View Class Details</a>
+        <a class="btn btn-secondary" asp-controller="Student" asp-action="Index">Back to Dashboard</a>
+    </div>
+</div>

@@ -1,0 +1,9 @@
+﻿@{
+    ViewData["Title"] = "Student Dashboard";
+}
+<h2>Welcome student, @ViewBag.FirstName</h2>
+<p>Đây là khu dành cho học sinh. Tính năng sẽ thêm sau.</p>
+<p>
+    <a class="btn btn-primary" asp-controller="Classrooms" asp-action="Join">Join a class</a>
+    <a class="btn btn-outline-primary" asp-action="Classes">Your Classes</a>
+</p>

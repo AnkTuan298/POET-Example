@@ -1,0 +1,28 @@
+﻿@model POETWeb.Models.Domain.Classroom
+@{
+    ViewData["Title"] = "Edit Class";
+}
+<h3>Edit class</h3>
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Subject" class="form-label"></label>
+        <input asp-for="Subject" class="form-control" />
+        <span asp-validation-for="Subject" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Class Code</label>
+        <input class="form-control" value="@Model.ClassCode" disabled />
+        <div class="form-text">Class code is fixed to avoid breaking join links.</div>
+    </div>
+    <button class="btn btn-primary" type="submit">Save</button>
+    <a class="btn btn-secondary" asp-action="Index">Back</a>
+</form>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

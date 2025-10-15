@@ -1,0 +1,139 @@
+﻿@page
+@model POETWeb.Areas.Identity.Pages.Account.Manage.IndexModel
+@{
+    ViewData["Title"] = "Profile";
+    ViewData["ActivePage"] = "Index";
+}
+
+<h3>Profile</h3>
+<partial name="_StatusMessage" for="StatusMessage" />
+
+<div class="row mt-3">
+    <div class="col-md-6">
+        <form method="post" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label class="form-label">User Name</label>
+                <input class="form-control" value="@Model.Username" disabled />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Account Code</label>
+                <input class="form-control" value="@Model.AccountCode" disabled />
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Input.FullName" class="form-label"></label>
+                <input asp-for="Input.FullName" class="form-control" />
+                <span asp-validation-for="Input.FullName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Input.PhoneNumber" class="form-label"></label>
+                <input asp-for="Input.PhoneNumber" class="form-control" />
+                <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Avatar (upload)</label>
+                <input type="file" asp-for="AvatarFile" class="form-control" accept=".jpg,.jpeg,.png,.webp" id="avatarFile" />
+                <div class="form-text">JPG/JEPG/PNG/WebP, Max 5MB.</div>
+                <span id="avatarSizeError" class="text-danger" style="display:none;">Avatar must be 5MB or smaller.</span>
+            </div>
+
+
+            <div class="mb-3">
+                <label asp-for="Input.AvatarUrl" class="form-label"></label>
+                <input asp-for="Input.AvatarUrl" class="form-control" id="avatarUrl" placeholder="Hoặc dán URL ảnh" />
+                <span asp-validation-for="Input.AvatarUrl" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label">Preview</label>
+        <div class="avatar-preview-wrapper">
+            <img id="avatarPreview"
+                 src="@(string.IsNullOrWhiteSpace(Model.Input?.AvatarUrl) ? "https://via.placeholder.com/200x200?text=Avatar" : Model.Input.AvatarUrl)"
+                 alt="Avatar"
+                 class="avatar-circle" />
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        //Preview khi nhập URL
+        const urlInput = document.getElementById('avatarUrl');
+        const img = document.getElementById('avatarPreview');
+        if (urlInput && img) {
+          urlInput.addEventListener('input', () => {
+            const v = urlInput.value?.trim();
+            img.src = v ? v : 'https://via.placeholder.com/200x200?text=Avatar';
+          });
+        }
+
+        //Preview khi chọn file
+        const fileInput = document.getElementById('avatarFile');
+        const errorSpan = document.getElementById('avatarSizeError');
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+        let currentObjectUrl = null;
+
+        function setPreviewSrc(src) {
+          // Thu hồi URL cũ (nếu có) để tránh rò rỉ bộ nhớ
+          if (currentObjectUrl && currentObjectUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(currentObjectUrl);
+          }
+          currentObjectUrl = src;
+          img.src = src;
+        }
+
+        if (fileInput && img) {
+          fileInput.addEventListener('change', () => {
+            errorSpan && (errorSpan.style.display = 'none');
+
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) {
+              // Không chọn file: nếu có URL thì dùng URL, không thì placeholder
+              const v = urlInput?.value?.trim();
+              setPreviewSrc(v ? v : 'https://via.placeholder.com/200x200?text=Avatar');
+              return;
+            }
+
+            // Kiểm tra dung lượng
+            if (file.size > maxSize) {
+              if (errorSpan) errorSpan.style.display = 'block';
+              fileInput.value = '';
+              // Khôi phục preview theo URL hoặc placeholder
+              const v = urlInput?.value?.trim();
+              setPreviewSrc(v ? v : 'https://via.placeholder.com/200x200?text=Avatar');
+              return;
+            }
+
+            // Kiểm tra loại file
+            if (!allowedTypes.has(file.type)) {
+              if (errorSpan) {
+                errorSpan.textContent = 'Only JPG, PNG or WebP are allowed.';
+                errorSpan.style.display = 'block';
+              }
+              fileInput.value = '';
+              const v = urlInput?.value?.trim();
+              setPreviewSrc(v ? v : 'https://via.placeholder.com/200x200?text=Avatar');
+              return;
+            }
+
+            // Tạo Object URL và gán cho <img> để preview
+            const objUrl = URL.createObjectURL(file);
+            setPreviewSrc(objUrl);
+
+            // Khi user đã chọn file -> Clear Url
+            if (urlInput) urlInput.value = '';
+          });
+        }
+    </script>
+}
+

@@ -1,0 +1,21 @@
+﻿@{
+    ViewData["Title"] = "Join Class";
+}
+<h3>Join class</h3>
+
+<form asp-action="Join" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label class="form-label">Class Code</label>
+        <input name="code" class="form-control" maxlength="6" />
+        <div class="form-text">Enter the 6-character class code.</div>
+    </div>
+
+    <button class="btn btn-primary" type="submit">Join</button>
+    <a class="btn btn-secondary" asp-action="Index">Back</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

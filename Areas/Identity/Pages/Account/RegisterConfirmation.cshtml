@@ -1,0 +1,33 @@
+﻿@page
+@model RegisterConfirmationModel
+@{
+    ViewData["Title"] = "Register confirmation";
+}
+
+<div class="container mt-5">
+    <div class="text-center">
+        <h1 class="mb-3">@ViewData["Title"]</h1>
+
+        @if (Model.DisplayConfirmAccountLink)
+        {
+            <p>
+                This app is currently in development mode.<br />
+                Click here to manually confirm your account:
+                <a id="confirm-link" href="@Model.EmailConfirmationUrl">Confirm your account</a>
+            </p>
+        }
+        else
+        {
+            <p class="fs-5">
+                Your account has been created successfully! <br />
+                Please check your email inbox (and spam folder) for a confirmation link to activate your account.
+            </p>
+
+            <p class="text-muted">
+                Once confirmed, you’ll be able to log in using your credentials.
+            </p>
+        }
+
+        <a class="btn btn-primary mt-3" asp-page="/Account/Login">Back to Login</a>
+    </div>
+</div>

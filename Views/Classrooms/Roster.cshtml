@@ -1,0 +1,44 @@
+﻿@model IEnumerable<dynamic>
+@{
+    ViewData["Title"] = "Class Roster";
+    var className = (string)ViewBag.ClassName;
+    var classCode = (string)ViewBag.ClassCode;
+}
+<h3>Students in @className <small class="text-muted">(@classCode)</small></h3>
+
+<table class="table table-striped table-sm align-middle">
+    <thead>
+        <tr>
+            <th style="width:48px;"></th>
+            <th>Full name</th>
+            <th>User name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Account</th>
+            <th>Role</th>
+            <th>Joined</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var s in Model)
+        {
+            var avatar = string.IsNullOrWhiteSpace((string?)s.AvatarUrl)
+            ? "https://via.placeholder.com/72?text=🙂"
+            : (string)s.AvatarUrl;
+            <tr>
+                <td><img src="@avatar" alt="avatar" class="avatar-sm" /></td>
+                <td>@s.FullName</td>
+                <td>@s.UserName</td>
+                <td>@s.Email</td>
+                <td>@s.PhoneNumber</td>
+                <td><code>@s.AccountCode</code></td>
+                <td>@s.RoleInClass</td>
+                <td>@(s.JoinedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"))</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<p>
+    <a class="btn btn-outline-secondary" asp-action="Index">Back</a>
+</p>

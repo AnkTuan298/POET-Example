@@ -1,0 +1,31 @@
+﻿@model POETWeb.Models.Domain.Classroom
+@{
+    ViewData["Title"] = "Class Details";
+}
+
+<div class="container mt-4">
+    <h2>@Model.Name (@Model.ClassCode)</h2>
+    <p><b>Subject:</b> @Model.Subject</p>
+    <p>
+        <strong>Teacher:</strong>
+        <img src="@(Model.Teacher?.AvatarUrl ?? "https://via.placeholder.com/72?text=👩‍🏫")" class="avatar-sm" alt="teacher" />
+        @(Model.Teacher?.FullName ?? "Unknown")
+    </p>
+
+
+    <hr />
+    <div class="mt-4">
+        @if (User.IsInRole("Teacher"))
+        {
+            <a class="btn btn-info me-2" asp-action="Roster" asp-route-id="@Model.Id">Student List</a>
+            <a class="btn btn-success me-2" asp-controller="Materials" asp-action="Index" asp-route-classId="@Model.Id">Materials</a>
+            <a class="btn btn-secondary" asp-action="Index">Back</a>
+        }
+        @if (User.IsInRole("Student"))
+        {
+            <a class="btn btn-info me-2" asp-action="RosterStudent" asp-route-id="@Model.Id">Student List</a>
+            <a class="btn btn-success me-2" asp-controller="Materials" asp-action="Index" asp-route-classId="@Model.Id">Materials</a>
+            <a class="btn btn-secondary" asp-controller="Student" asp-action="Index">Back</a>
+        }
+    </div>
+</div>

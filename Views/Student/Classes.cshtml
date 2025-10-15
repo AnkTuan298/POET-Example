@@ -1,0 +1,36 @@
+﻿@model IEnumerable<dynamic>
+@{
+    ViewData["Title"] = "Your Classes";
+}
+<h2>Your Enrolled Classes</h2>
+
+<table class="table table-striped mt-3 align-middle">
+    <thead>
+        <tr>
+            <th style="width:48px;"></th>
+            <th>Class Name</th>
+            <th>Subject</th>
+            <th>Teacher</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var cls in Model)
+        {
+            var tAvatar = string.IsNullOrWhiteSpace((string?)cls.TeacherAvatar)
+            ? "https://via.placeholder.com/72?text=👩‍🏫"
+            : (string)cls.TeacherAvatar;
+            <tr>
+                <td><img src="@tAvatar" alt="teacher" class="avatar-sm" /></td>
+                <td>@cls.Name</td>
+                <td>@cls.Subject</td>
+                <td>@cls.TeacherName</td>
+                <td>
+                    <a class="btn btn-primary btn-sm" asp-controller="Classrooms" asp-action="Details" asp-route-id="@cls.Id">View</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a class="btn btn-secondary mt-3" asp-controller="Student" asp-action="Index">Back</a>
