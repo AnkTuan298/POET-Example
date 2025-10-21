@@ -1,7 +1,238 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "POET";
+    ViewBag.HideLayoutNav = true;
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-</div>
+<nav class="lp-nav sticky-top bg-white bg-opacity-75 backdrop-blur border-bottom border-slate-200">
+    <div class="container-xxl px-4 py-3 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <div class="lp-logo bg-primary text-white rounded-3 d-flex align-items-center justify-content-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-book">
+                    <path d="M1 2.828c.885-.37 2.154-.828 3.5-.828 1.346 0 2.615.458 3.5.828V14c-.885-.37-2.154-.828-3.5-.828-1.346 0-2.615.458-3.5.828V2.828z" />
+                    <path d="M9 2.828c.885-.37 2.154-.828 3.5-.828C13.846 2 15.115 2.458 16 2.828V14c-.885-.37-2.154-.828-3.5-.828-1.346 0-2.615.458-3.5.828V2.828z" />
+                </svg>
+            </div>
+            <span class="fs-5 fw-bold text-slate-900 mb-0">POET</span>
+        </div>
+
+        <div class="d-none d-md-flex align-items-center gap-3">
+            <a class="btn btn-outline-secondary px-3" asp-area="Identity" asp-page="/Account/Login">Login</a>
+            <a class="btn btn-primary px-3" asp-area="Identity" asp-page="/Account/Register">Sign Up</a>
+        </div>
+    </div>
+</nav>
+
+<section class="container-xxl px-4 py-5 text-center">
+    <div class="space-y-6">
+        <h1 class="display-4 fw-bold text-slate-900">The Future of Online Teaching</h1>
+        <p class="fs-5 text-slate-600 mx-auto" style="max-width: 48rem;">
+            POET empowers educators to create engaging classes, manage students, and track progress
+            all in one beautiful platform.
+        </p>
+        <div class="d-flex gap-3 justify-content-center pt-2 flex-wrap">
+            <a class="btn btn-lg btn-primary d-inline-flex align-items-center gap-2"
+               asp-area="Identity" asp-page="/Account/Register">
+                Get Started Free
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-right">
+                    <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793L9.146 3.354a.5.5 0 1 1 .708-.708l4.999 5a.5.5 0 0 1 0 .708l-5 5a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z" />
+                </svg>
+            </a>
+        </div>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-5 fw-bold text-slate-900">Powerful Features for Educators</h2>
+            <p class="lead text-slate-600 mb-0">Everything you need to teach effectively online</p>
+        </div>
+
+        <div class="row g-4">
+            <!-- Feature 1 -->
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="lp-card p-4 h-100">
+                    <div class="lp-icon lp-icon--blue mb-3" aria-label="Create courses">
+                        <!-- book-open -->
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                             width="26" height="26" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img">
+                            <path d="M3 5h8a4 4 0 0 1 4 4v10H7a4 4 0 0 0-4 4V5z" />
+                            <path d="M13 5h8v14a4 4 0 0 0-4 4h-8" />
+                            <path d="M11 8v5" />
+                        </svg>
+                    </div>
+                    <h3 class="h4 fw-bold text-slate-900">Create Classes</h3>
+                    <p class="text-slate-600 mb-0">Create comprehensive Class with lessons, assignments, and resources in minutes.</p>
+                </div>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="lp-card p-4 h-100">
+                    <div class="lp-icon lp-icon--blue mb-3" aria-label="Manage students">
+                        <!-- users -->
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                             width="26" height="26" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                    </div>
+                    <h3 class="h4 fw-bold text-slate-900">Manage Students</h3>
+                    <p class="text-slate-600 mb-0">Enroll learners, track attendance, and handle rosters effortlessly.</p>
+                </div>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="lp-card p-4 h-100">
+                    <div class="lp-icon lp-icon--blue mb-3" aria-label="Grade and assess">
+                        <!-- bar-chart -->
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                             width="26" height="26" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 3v18h18" />
+                            <rect x="7" y="11" width="3" height="7" rx="1" />
+                            <rect x="12" y="7" width="3" height="11" rx="1" />
+                            <rect x="17" y="4" width="3" height="14" rx="1" />
+                        </svg>
+                    </div>
+                    <h3 class="h4 fw-bold text-slate-900">Grade & Assess</h3>
+                    <p class="text-slate-600 mb-0">Create assignments, grade submissions, and provide feedback all in one place.</p>
+                </div>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="lp-card p-4 h-100">
+                    <div class="lp-icon lp-icon--blue mb-3" aria-label="Video lessons">
+                        <!-- play -->
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                             width="26" height="26" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <polygon points="10 8 16 12 10 16 10 8" />
+                        </svg>
+                    </div>
+                    <h3 class="h4 fw-bold text-slate-900">Video Lessons</h3>
+                    <p class="text-slate-600 mb-0">Upload and stream video content directly to your students with ease.</p>
+                </div>
+            </div>
+
+            <!-- Feature 5 -->
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="lp-card p-4 h-100">
+                    <div class="lp-icon lp-icon--blue mb-3" aria-label="Real-time analytics">
+                        <!-- zap -->
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                             width="26" height="26" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                        </svg>
+                    </div>
+                    <h3 class="h4 fw-bold text-slate-900">Real-time Analytics</h3>
+                    <p class="text-slate-600 mb-0">Track student progress with detailed analytics and performance insights.</p>
+                </div>
+            </div>
+
+            <!-- Feature 6 -->
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="lp-card p-4 h-100">
+                    <div class="lp-icon lp-icon--blue mb-3" aria-label="Easy to use">
+                        <!-- check-circle -->
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                             width="26" height="26" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                    </div>
+                    <h3 class="h4 fw-bold text-slate-900">Easy to Use</h3>
+                    <p class="text-slate-600 mb-0">Intuitive interface designed for educators, no technical skills required.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <!-- Left side: Text -->
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <h2 class="fw-bold text-slate-900 mb-4">Why Choose POET?</h2>
+                <ul class="list-unstyled fs-5">
+                    <li class="d-flex mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="#22c55e" stroke-width="2" class="me-2" viewBox="0 0 24 24">
+                            <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                        <div>
+                            <span class="fw-semibold text-slate-900">For Teachers</span><br />
+                            <span class="text-slate-600">Save time on admin, focus on teaching.</span>
+                        </div>
+                    </li>
+                    <li class="d-flex mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="#22c55e" stroke-width="2" class="me-2" viewBox="0 0 24 24">
+                            <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                        <div>
+                            <span class="fw-semibold text-slate-900">For Students</span><br />
+                            <span class="text-slate-600">Learn anywhere with a seamless experience.</span>
+                        </div>
+                    </li>
+                    <li class="d-flex mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="#22c55e" stroke-width="2" class="me-2" viewBox="0 0 24 24">
+                            <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                        <div>
+                            <span class="fw-semibold text-slate-900">Affordable</span><br />
+                            <span class="text-slate-600">Flexible plans for any institution size.</span>
+                        </div>
+                    </li>
+                    <li class="d-flex">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="#22c55e" stroke-width="2" class="me-2" viewBox="0 0 24 24">
+                            <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                        <div>
+                            <span class="fw-semibold text-slate-900">24/7 Support</span><br />
+                            <span class="text-slate-600">We’re here whenever you need us.</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Right side: Image -->
+            <div class="col-lg-6 text-center">
+                <img src="/images/whychoosepoet.png" style="max-width: 105%; margin-left: -100px;">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="lp-cta-full text-white text-center">
+    <div class="container py-5">
+        <h2 class="display-6 fw-bold mb-2">Ready to Transform Your Teaching?</h2>
+        <p class="fs-5 mb-4 opacity-75">Join thousands of educators already using POET</p>
+        <a class="btn btn-lg btn-light text-primary fw-semibold d-inline-flex align-items-center gap-2"
+           asp-area="Identity" asp-page="/Account/Register">
+            Start Your Free Trial
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-right">
+                <path fill-rule="evenodd"
+                      d="M1 8a.5.5 0 0 1 .5-.5h11.793L9.146 3.354a.5.5 0 1 1 .708-.708l4.999 5a.5.5 0 0 1 0 .708l-5 5a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z" />
+            </svg>
+        </a>
+    </div>
+</section>
+
+
+<footer class="bg-slate-900 text-slate-400 py-5">
+    <div class="container-xxl px-4">
+        <div class="pt-3 text-center small">
+            © 2025 POET. Professional Online Education Technology. All rights reserved.
+        </div>
+    </div>
+</footer>
