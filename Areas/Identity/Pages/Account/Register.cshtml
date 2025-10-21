@@ -4,78 +4,196 @@
     ViewData["Title"] = "Register";
 }
 
-<h1>@ViewData["Title"]</h1>
+<!-- Header giống Login -->
+<nav class="navbar navbar-expand-lg lp-nav bg-white shadow-sm sticky-top py-3">
+    <div class="container-xxl px-4">
+        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-slate-900"
+           asp-area="" asp-page="/Index">
+            <img src="~/images/logo.svg" alt="POET logo" class="lp-logo" />
+            POET
+        </a>
 
-<div class="row">
-    <div class="col-md-4">
-        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
-            <h2>Create a new account.</h2>
-            <hr />
-            <div class="form-floating mb-3">
-                <input asp-for="Input.UserName" class="form-control" autocomplete="username" aria-required="true" placeholder="abcdxyz" />
-                <label asp-for="Input.UserName">User Name</label>
-                <span asp-validation-for="Input.UserName" class="text-danger"></span>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navLinks" aria-controls="navLinks" aria-expanded="false"
+                aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse justify-content-end" id="navLinks">
+            <ul class="navbar-nav gap-3">
+                <li class="nav-item">
+                    <a class="btn btn-sm btn-outline-secondary px-3 fw-semibold"
+                       asp-page="./Login">
+                        Login
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Body -->
+<div class="auth-wrap d-flex align-items-center justify-content-center">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8 col-lg-6 col-xxl-5">
+                <div class="card shadow-lg border-0 rounded-4">
+                    <div class="card-body p-4 p-md-5">
+
+                        <!-- Brand / Title -->
+                        <div class="text-center mb-4">
+                            <div class="brand-bubble mb-3">
+                                <i class="bi bi-person-plus-fill"></i>
+                            </div>
+                            <h1 class="h4 fw-bold mb-1 text-slate-900">Create your account</h1>
+                            <p class="text-muted mb-0">Join POET and start learning or teaching today</p>
+                        </div>
+
+                        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post" novalidate>
+                            <div asp-validation-summary="ModelOnly" class="text-danger small mb-3" role="alert"></div>
+
+                            <!-- Username -->
+                            <div class="form-floating mb-3">
+                                <input asp-for="Input.UserName"
+                                       class="form-control"
+                                       autocomplete="username"
+                                       aria-required="true"
+                                       placeholder="abcdxyz" />
+                                <label asp-for="Input.UserName">User Name</label>
+                                <span asp-validation-for="Input.UserName" class="text-danger small"></span>
+                            </div>
+
+                            <!-- Full name -->
+                            <div class="form-floating mb-3">
+                                <input asp-for="Input.FullName"
+                                       class="form-control"
+                                       autocomplete="name"
+                                       aria-required="true"
+                                       placeholder="Nguyen Van A" />
+                                <label asp-for="Input.FullName">Full Name</label>
+                                <span asp-validation-for="Input.FullName" class="text-danger small"></span>
+                            </div>
+
+                            <!-- Email -->
+                            <div class="form-floating mb-3">
+                                <input asp-for="Input.Email"
+                                       class="form-control"
+                                       autocomplete="email"
+                                       aria-required="true"
+                                       placeholder="name@example.com" />
+                                <label asp-for="Input.Email">Email</label>
+                                <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                            </div>
+
+                            <!-- Phone -->
+                            <div class="form-floating mb-3">
+                                <input asp-for="Input.PhoneNumber"
+                                       class="form-control"
+                                       autocomplete="tel"
+                                       aria-required="false"
+                                       placeholder="0123456789" />
+                                <label asp-for="Input.PhoneNumber">Phone Number</label>
+                                <span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
+                            </div>
+
+                            <!-- Password -->
+                            <div class="mb-3">
+                                <div class="form-floating position-relative">
+                                    <input asp-for="Input.Password"
+                                           class="form-control pe-5"
+                                           id="password"
+                                           autocomplete="new-password"
+                                           aria-required="true"
+                                           placeholder="Password" />
+                                    <label asp-for="Input.Password">Password</label>
+
+                                <!-- Toggle eye -->
+                                <button type="button"
+                                        class="btn btn-light btn-icon"
+                                        id="togglePassword"
+                                        aria-label="Toggle password">
+                                    <i class="bi bi-eye-slash" id="eyeIcon"></i>
+                                </button>
+                                </div>
+
+                                <div class="form-text mt-2">
+                                    Must have at least 8 chars, 1 uppercase, 1 number, 1 special character.
+                                </div>
+                                <span asp-validation-for="Input.Password" class="text-danger small"></span>
+                            </div>
+
+                            <!-- Confirm password -->
+                            <div class="mb-4 position-relative">
+                                <div class="form-floating">
+                                    <input asp-for="Input.ConfirmPassword"
+                                           class="form-control pe-5"
+                                           id="confirmPassword"
+                                           autocomplete="new-password"
+                                           aria-required="true"
+                                           placeholder="Confirmed Password" />
+                                    <label asp-for="Input.ConfirmPassword">Confirm Password</label>
+                                </div>
+                                <span asp-validation-for="Input.ConfirmPassword" class="text-danger small"></span>
+                            </div>
+
+                            <!-- Submit -->
+                            <div class="d-grid">
+                                <button id="registerSubmit" type="submit" class="btn btn-primary btn-lg fw-semibold">
+                                    Register
+                                </button>
+                            </div>
+
+                            <!-- Aux links -->
+                            <div class="mt-4 text-center small">
+                                <p class="mb-0">
+                                    Already have an account?
+                                    <a asp-page="./Login" class="link-secondary text-decoration-none">Login</a>
+                                </p>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+
+                <p class="text-center text-muted small mt-4 mb-0">
+                    © 2025 POET. Professional Online Education Technology.
+                </p>
             </div>
-
-            <div class="form-floating mb-3">
-                <input asp-for="Input.FullName" class="form-control" autocomplete="name" aria-required="true" placeholder="Nguyen Van A" />
-                <label asp-for="Input.FullName">Full Name</label>
-                <span asp-validation-for="Input.FullName" class="text-danger"></span>
-            </div>
-
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Email" class="form-control" autocomplete="email" aria-required="true" placeholder="name@example.com" />
-                <label asp-for="Input.Email">Email</label>
-                <span asp-validation-for="Input.Email" class="text-danger"></span>
-            </div>
-
-            <div class="form-floating mb-3">
-                <input asp-for="Input.PhoneNumber" class="form-control" autocomplete="tel" aria-required="false" placeholder="0123456789" />
-                <label asp-for="Input.PhoneNumber">Phone Number</label>
-                <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
-            </div>
-
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Password" class="form-control" id="password" autocomplete="password" aria-required="true" placeholder="Password" />
-                <label asp-for="Input.Password">Password</label>
-                    <button type="button"
-                            class="btn btn-sm"
-                            id="togglePassword"
-                            aria-label="Toggle password"
-                            style="position:absolute; right:6px; top:50%; transform:translateY(-50%); padding:0.18rem 0.35rem;">
-                        <span id="eyeIcon">🙈</span>
-                    </button>
-
-                <span asp-validation-for="Input.Password" class="text-danger"></span>
-            </div>
-
-            <div class="form-floating mb-3">
-                <input asp-for="Input.ConfirmPassword" class="form-control" id="confirmPassword" autocomplete="password" aria-required="true" placeholder="Confirmed Password" />
-                <label asp-for="Input.ConfirmPassword">Confirm Password</label>
-                <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
-            </div>
-
-            <button id="registerSubmit" type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
-        </form>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        document.getElementById('togglePassword')?.addEventListener('click', function () {
-          const inp = document.getElementById('password');
-          if (!inp) return;
-          if (inp.type === 'password') {
-            inp.type = 'text';
-            document.getElementById('eyeIcon').textContent = '👁️';
-          } else {
-            inp.type = 'password';
-            document.getElementById('eyeIcon').textContent = '🙈';
-          }
-        });
+        // Toggle primary password
+        (function () {
+            const btn = document.getElementById('togglePassword');
+            const inp = document.getElementById('password');
+            const icon = document.getElementById('eyeIcon');
+            if (!btn || !inp || !icon) return;
+
+            btn.addEventListener('click', function () {
+                const hidden = inp.type === 'password';
+                inp.type = hidden ? 'text' : 'password';
+                icon.classList.toggle('bi-eye', hidden);
+                icon.classList.toggle('bi-eye-slash', !hidden);
+            });
+        })();
+
+        // Toggle confirm password
+        (function () {
+            const btn = document.getElementById('toggleConfirmPassword');
+            const inp = document.getElementById('confirmPassword');
+            const icon = document.getElementById('eyeIcon2');
+            if (!btn || !inp || !icon) return;
+
+            btn.addEventListener('click', function () {
+                const hidden = inp.type === 'password';
+                inp.type = hidden ? 'text' : 'password';
+                icon.classList.toggle('bi-eye', hidden);
+                icon.classList.toggle('bi-eye-slash', !hidden);
+            });
+        })();
     </script>
-
-
 }
-

@@ -1,16 +1,12 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-#nullable disable
-
-using System;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
+using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Caching.Distributed;
 using POETWeb.Models;
 
 namespace POETWeb.Areas.Identity.Pages.Account
@@ -19,62 +15,88 @@ namespace POETWeb.Areas.Identity.Pages.Account
     public class RegisterConfirmationModel : PageModel
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IEmailSender _sender;
+        private readonly IEmailSender _emailSender;
+        private readonly IDistributedCache _cache;
 
-        public RegisterConfirmationModel(UserManager<ApplicationUser> userManager, IEmailSender sender)
+        public RegisterConfirmationModel(
+            UserManager<ApplicationUser> userManager,
+            IEmailSender emailSender,
+            IDistributedCache cache)
         {
             _userManager = userManager;
-            _sender = sender;
+            _emailSender = emailSender;
+            _cache = cache;
         }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public string Email { get; set; }
+        // Email được truyền qua query khi chuyển đến trang này sau đăng ký
+        [BindProperty(SupportsGet = true)]
+        public string? Email { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public bool DisplayConfirmAccountLink { get; set; }
-
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public string EmailConfirmationUrl { get; set; }
-
-        public async Task<IActionResult> OnGetAsync(string email, string returnUrl = null)
+        public void OnGet()
         {
-            if (email == null)
-            {
-                return RedirectToPage("/Index");
-            }
-            returnUrl = returnUrl ?? Url.Content("~/");
+            // chỉ để render; Email đã có từ query (?email=...)
+        }
 
-            var user = await _userManager.FindByEmailAsync(email);
+        public class ResendResponse
+        {
+            public bool ok { get; set; }
+            public string message { get; set; } = "";
+        }
+
+        // AJAX: POST /Account/RegisterConfirmation?handler=Resend
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> OnPostResendAsync()
+        {
+            if (string.IsNullOrWhiteSpace(Email))
+            {
+                return new JsonResult(new ResendResponse { ok = false, message = "Missing email." })
+                { StatusCode = 400 };
+            }
+
+            var user = await _userManager.FindByEmailAsync(Email);
             if (user == null)
             {
-                return NotFound($"Unable to load user with email '{email}'.");
+                return new JsonResult(new ResendResponse { ok = false, message = "This email is not registered." })
+                { StatusCode = 404 };
             }
 
-            Email = email;
-            // Once you add a real email sender, you should remove this code that lets you confirm the account
-            DisplayConfirmAccountLink = true;
-            if (DisplayConfirmAccountLink)
+            if (await _userManager.IsEmailConfirmedAsync(user))
             {
-                var userId = await _userManager.GetUserIdAsync(user);
-                var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                EmailConfirmationUrl = Url.Page(
-                    "/Account/ConfirmEmail",
-                    pageHandler: null,
-                    values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
-                    protocol: Request.Scheme);
+                return new JsonResult(new ResendResponse { ok = false, message = "This email is already confirmed." })
+                { StatusCode = 400 };
             }
 
-            return Page();
+            // Throttle 60s theo email
+            var key = $"resend:confirm:{Email.ToLower()}";
+            var hit = await _cache.GetStringAsync(key);
+            if (hit != null)
+            {
+                return new JsonResult(new ResendResponse { ok = false, message = "Please wait 60 seconds before resending." })
+                { StatusCode = 429 };
+            }
+
+            // Gửi lại mail xác nhận
+            var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var enc = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+            var callbackUrl = Url.Page("/Account/ConfirmEmail",
+                pageHandler: null,
+                values: new { area = "Identity", userId = user.Id, code = enc },
+                protocol: Request.Scheme);
+
+            await _emailSender.SendEmailAsync(
+                Email,
+                "Confirm your email",
+                $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+
+            // đặt throttle 60s
+            await _cache.SetStringAsync(
+                key, "1",
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60)
+                });
+
+            return new JsonResult(new ResendResponse { ok = true, message = "Confirmation email sent." });
         }
     }
 }
