@@ -235,3 +235,103 @@ section h2 {
             color: #fff;
             transform: translateY(-2px);
         }
+
+
+/* nền section login cùng tông Home */
+.login-bg {
+    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 55%, #f8fafc 100%);
+}
+
+/* card */
+.login-card {
+    border: 1px solid #e6eefc;
+    border-radius: 1rem;
+}
+
+/* logo ô vuông mờ */
+.brand-mark {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(180deg,#e9f1ff 0%, #dfebff 100%);
+    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.15), inset 0 1px 0 rgba(255,255,255,.8);
+}
+
+/* nút gradient chủ đạo */
+.gradient-primary {
+    background-image: linear-gradient(90deg,#2563eb 0%, #4f46e5 100%);
+    border: none;
+}
+
+    .gradient-primary:hover {
+        filter: brightness(1.05);
+    }
+
+/* đường kẻ "Or continue with" */
+.divider {
+    position: relative;
+    text-align: center;
+}
+
+    .divider::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        border-top: 1px solid #e5e7eb;
+        transform: translateY(-50%);
+    }
+
+    .divider span {
+        position: relative;
+        padding: 0 .75rem;
+        background: #fff;
+        color: #6b7280;
+        font-size: .9rem;
+    }
+
+.auth-wrap {
+    min-height: calc(100vh - 120px);
+    background: linear-gradient(180deg, #f1f5ff 0%, #ffffff 60%);
+}
+
+
+.brand-bubble {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg,#e9f1ff 0%, #dfebff 100%);
+    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.15), inset 0 1px 0 rgba(255,255,255,.8);
+    color: #2563eb;
+    font-size: 1.25rem;
+}
+
+
+.btn-icon {
+    position: absolute;
+    right: .5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: .35rem .5rem;
+    border: 1px solid rgba(0,0,0,.06);
+    box-shadow: 0 3px 10px rgba(0,0,0,.06);
+}
+
+    .btn-icon:hover {
+        background: #f8fafc;
+    }
+
+
+.text-slate-900 {
+    color: #0f172a !important;
+}
+
+.auth-page {
+    background: linear-gradient(180deg, #f1f5ff 0%, #f8fafc 100%);
+}
