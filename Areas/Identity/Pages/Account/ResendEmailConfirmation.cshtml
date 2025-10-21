@@ -4,24 +4,109 @@
     ViewData["Title"] = "Resend email confirmation";
 }
 
-<h1>@ViewData["Title"]</h1>
-<h2>Enter your email.</h2>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form method="post">
-            <div asp-validation-summary="All" class="text-danger" role="alert"></div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Email" class="form-control" aria-required="true" placeholder="name@example.com" />
-                <label asp-for="Input.Email" class="form-label"></label>
-                <span asp-validation-for="Input.Email" class="text-danger"></span>
+<nav class="navbar navbar-expand-lg lp-nav bg-white shadow-sm sticky-top py-3">
+    <div class="container-xxl px-4">
+        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-slate-900"
+           asp-area="" asp-page="/Index">
+            <img src="~/images/logo.svg" alt="POET logo" class="lp-logo" />
+            POET
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navLinks" aria-controls="navLinks" aria-expanded="false"
+                aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse justify-content-end" id="navLinks">
+            <ul class="navbar-nav gap-3">
+                <li class="nav-item">
+                    <a class="btn btn-sm btn-outline-secondary px-3 fw-semibold"
+                       asp-page="./Login">
+                        Login
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="auth-wrap d-flex align-items-center justify-content-center">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8 col-lg-5">
+                <div class="card shadow-lg border-0 rounded-4">
+                    <div class="card-body p-4 p-md-5">
+
+                        <div class="text-center mb-4">
+                            <div class="brand-bubble mb-3">
+                                <i class="bi bi-envelope-paper-fill"></i>
+                            </div>
+                            <h1 class="h4 fw-bold mb-1 text-slate-900">Resend email confirmation</h1>
+                            <p class="text-muted mb-0">Enter your email to receive a new confirmation link.</p>
+                        </div>
+
+                        <form method="post" novalidate>
+                            <div asp-validation-summary="All" class="text-danger small mb-3" role="alert"></div>
+
+                            <div class="form-floating mb-3">
+                                <input asp-for="Input.Email"
+                                       class="form-control"
+                                       aria-required="true"
+                                       autocomplete="username"
+                                       placeholder="name@example.com" />
+                                <label asp-for="Input.Email" class="form-label">Email address</label>
+                                <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                            </div>
+
+                            <div class="mb-3">
+                                <partial name="_StatusMessage" for="StatusMessage" />
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg fw-semibold">
+                                    <i class="bi bi-send me-1"></i> Resend
+                                </button>
+                            </div>
+
+                            <div class="text-center mt-4">
+                                <a asp-page="./Login" class="small link-secondary text-decoration-none">
+                                    ← Back to login
+                                </a>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+
+                <p class="text-center text-muted small mt-4 mb-0">
+                    © 2025 POET. Professional Online Education Technology.
+                </p>
             </div>
-            <partial name="_StatusMessage" for="StatusMessage" />
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Resend</button>
-        </form>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var remain = parseInt('@(ViewData["CooldownRemain"] ?? "0")');
+            const btn = document.querySelector('button[type="submit"]');
+            const originalText = btn ? btn.innerText : "";
+
+            if (btn && remain > 0) {
+                btn.disabled = true;
+                const timer = setInterval(() => {
+                    if (remain <= 0) {
+                        clearInterval(timer);
+                        btn.disabled = false;
+                        btn.innerText = originalText || 'Resend';
+                    } else {
+                        btn.innerText = `Resend (${remain--}s)`;
+                    }
+                }, 1000);
+            }
+        })();
+    </script>
 }

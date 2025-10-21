@@ -34,8 +34,8 @@ namespace POETWeb
 
             builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
             builder.Services.AddTransient<IEmailSender, EmailSender>();
-
             builder.Services.AddControllersWithViews();
+            builder.Services.AddMemoryCache();
 
             var app = builder.Build();
 

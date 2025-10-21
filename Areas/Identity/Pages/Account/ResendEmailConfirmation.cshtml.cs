@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Caching.Memory;
 using POETWeb.Models;
 
 namespace POETWeb.Areas.Identity.Pages.Account
@@ -22,11 +23,19 @@ namespace POETWeb.Areas.Identity.Pages.Account
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IEmailSender _emailSender;
+        private readonly IMemoryCache _cache;
 
-        public ResendEmailConfirmationModel(UserManager<ApplicationUser> userManager, IEmailSender emailSender)
+        // Thời gian chờ giữa 2 lần gửi lại (per email)
+        private static readonly TimeSpan Cooldown = TimeSpan.FromMinutes(1);
+
+        public ResendEmailConfirmationModel(
+            UserManager<ApplicationUser> userManager,
+            IEmailSender emailSender,
+            IMemoryCache cache) 
         {
             _userManager = userManager;
             _emailSender = emailSender;
+            _cache = cache;
         }
 
         [BindProperty]
@@ -49,6 +58,22 @@ namespace POETWeb.Areas.Identity.Pages.Account
             if (!ModelState.IsValid)
             {
                 return Page();
+            }
+
+            var normEmail = (Input.Email ?? string.Empty).Trim().ToLowerInvariant();
+            var cacheKey = $"resend-email:{normEmail}";
+
+            // Kiểm tra cooldown
+            if (_cache.TryGetValue<DateTime>(cacheKey, out var lastSentUtc))
+            {
+                var elapsed = DateTime.UtcNow - lastSentUtc;
+                if (elapsed < Cooldown)
+                {
+                    var remain = (int)Math.Ceiling((Cooldown - elapsed).TotalSeconds);
+                    StatusMessage = $"Please wait {remain}s before requesting another confirmation email.";
+                    ViewData["CooldownRemain"] = remain;
+                    return Page();
+                }
             }
 
             var user = await _userManager.FindByEmailAsync(Input.Email);
@@ -82,6 +107,13 @@ namespace POETWeb.Areas.Identity.Pages.Account
                 Input.Email,
                 "Confirm your email",
                 $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+
+            // Ghi nhận thời điểm gửi để kích hoạt cooldown
+            _cache.Set(cacheKey, DateTime.UtcNow,
+                new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = Cooldown
+                });
 
             StatusMessage = "Email xác nhận đã được gửi. Hãy kiểm tra hộp thư của bạn.";
             return Page();
