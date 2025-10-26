@@ -155,8 +155,8 @@ namespace POETWeb.Areas.Identity.Pages.Account
                 user.UserName = Input.UserName;        // username
                 user.FullName = Input.FullName;        // fullname
                 user.PhoneNumber = Input.PhoneNumber;  // phone number
-                user.AccountCode = await Helpers.CodeGenerator.GenerateUniqueAccountCodeAsync(_userManager);                // auto code
-                user.AvatarUrl = null;
+                user.AccountCode = await Helpers.CodeGenerator.GenerateUniqueAccountCodeAsync(_userManager);// auto gen code
+                user.AvatarUrl = "/uploads/avatars/defaultavatar.png";//default avatar
 
                 var result = await _userManager.CreateAsync(user, Input.Password);
 

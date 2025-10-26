@@ -6,13 +6,12 @@
 <nav class="lp-nav sticky-top bg-white bg-opacity-75 backdrop-blur border-bottom border-slate-200">
     <div class="container-xxl px-4 py-3 d-flex align-items-center justify-content-between">
         <div class="d-flex align-items-center gap-2">
-            <div class="lp-logo bg-primary text-white rounded-3 d-flex align-items-center justify-content-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-book">
-                    <path d="M1 2.828c.885-.37 2.154-.828 3.5-.828 1.346 0 2.615.458 3.5.828V14c-.885-.37-2.154-.828-3.5-.828-1.346 0-2.615.458-3.5.828V2.828z" />
-                    <path d="M9 2.828c.885-.37 2.154-.828 3.5-.828C13.846 2 15.115 2.458 16 2.828V14c-.885-.37-2.154-.828-3.5-.828-1.346 0-2.615.458-3.5.828V2.828z" />
-                </svg>
-            </div>
-            <span class="fs-5 fw-bold text-slate-900 mb-0">POET</span>
+            <a class="navbar-brand d-inline-flex align-items-center"
+               asp-controller="Home" asp-action="Index" aria-label="POET Home">
+                <img src="@Url.Content("~/LOGO/POETLOGO.png")"
+                     alt="POET"
+                     class="brand-logo" />
+            </a>
         </div>
 
         <div class="d-none d-md-flex align-items-center gap-3">

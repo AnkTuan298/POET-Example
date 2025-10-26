@@ -40,13 +40,6 @@
                 <span id="avatarSizeError" class="text-danger" style="display:none;">Avatar must be 5MB or smaller.</span>
             </div>
 
-
-            <div class="mb-3">
-                <label asp-for="Input.AvatarUrl" class="form-label"></label>
-                <input asp-for="Input.AvatarUrl" class="form-control" id="avatarUrl" placeholder="Hoặc dán URL ảnh" />
-                <span asp-validation-for="Input.AvatarUrl" class="text-danger"></span>
-            </div>
-
             <button type="submit" class="btn btn-primary">Save</button>
         </form>
     </div>
