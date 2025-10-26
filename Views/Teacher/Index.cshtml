@@ -1,9 +1,333 @@
-﻿@{
-    ViewData["Title"] = "Teacher Dashboard";
+﻿@using POETWeb.Models.ViewModels
+@using POETWeb.Models
+@model TeacherDashboardVM
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+
+@{
+    ViewData["Title"] = "Teacher dashboard";
 }
-<h2>Welcome teacher, @ViewBag.FirstName</h2>
-<p>Đây là khu dành cho giáo viên. Tính năng sẽ thêm sau.</p>
-<p>
-    <a class="btn btn-primary" asp-controller="Classrooms" asp-action="Index">My classes</a>
-    <a class="btn btn-outline-primary" asp-controller="Classrooms" asp-action="Create">Create class</a>
-</p>
+
+<nav class="navbar navbar-expand-lg lp-nav bg-white shadow-sm sticky-top py-3">
+    <div class="container-xxl px-4">
+        <a class="navbar-brand d-inline-flex align-items-center"
+           asp-controller="Teacher" asp-action="Index" aria-label="POET Home">
+            <img src="@Url.Content("~/LOGO/POETLOGO.png")"
+                 alt="POET"
+                 class="brand-logo" />
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#teacherNav" aria-controls="teacherNav"
+                aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        @{
+            var displayName = User?.Identity?.Name ?? "User";
+            string avatarUrl = Url.Content("~/images/avatar-default.png");
+
+            if (SignInManager.IsSignedIn(User))
+            {
+                var me = await UserManager.GetUserAsync(User);
+                var raw = me?.AvatarUrl;
+                if (!string.IsNullOrWhiteSpace(raw))
+                    avatarUrl = Url.Content(raw);
+            }
+        }
+
+
+
+        <div class="user-menu ms-3">
+            <button class="user-trigger user-trigger--elevated" type="button" aria-haspopup="true" aria-expanded="false">
+                    <img src="@avatarUrl"
+                         alt="Avatar"
+                         class="avatar-sm me-2"
+                         onerror="this.onerror=null;this.src='@Url.Content("~/images/avatar-default.png")';" />
+                    <span>@displayName</span>
+                    <svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 7l5 6 5-6z" fill="currentColor" /></svg>
+            </button>
+
+            <div class="user-panel" role="menu" aria-label="Account menu">
+                <div class="user-panel__cap"></div>
+                <div class="user-panel__header">@displayName</div>
+
+                <a class="user-item" role="menuitem"
+                    asp-area="Identity" asp-page="/Account/Manage/Index">
+                    Profile
+                </a>
+
+                <form class="m-0" asp-area="Identity" asp-page="/Account/Logout" method="post">
+                    <button type="submit" class="user-item-btn" role="menuitem">Log out</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</nav>
+
+
+<div class="tdash-wrap">
+    <!-- Header -->
+    <div class="container-xxl px-4 pt-4">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+            <div>
+                <h1 class="display-6 fw-bold text-slate-900 mb-1">Welcome back, @Model.FirstName!</h1>
+                <p class="text-slate-600 mb-0">Manage your classes and track student progress</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <section class="container-xxl px-4 mb-3">
+        <div class="row g-3">
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="tdash-stat">
+                    <div class="tdash-stat__icon"><i class="bi bi-journal-check"></i></div>
+                    <div class="tdash-stat__body">
+                        <div class="tdash-stat__label">Active Classes</div>
+                        <div class="tdash-stat__value">@Model.ActiveClasses</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="tdash-stat">
+                    <div class="tdash-stat__icon"><i class="bi bi-people"></i></div>
+                    <div class="tdash-stat__body">
+                        <div class="tdash-stat__label">Total Students</div>
+                        <div class="tdash-stat__value">@Model.TotalStudents</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="tdash-stat">
+                    <div class="tdash-stat__icon"><i class="bi bi-check2-square"></i></div>
+                    <div class="tdash-stat__body">
+                        <div class="tdash-stat__label">Assignments</div>
+                        @if (Model.Assignments > 0)
+                        {
+                            <div class="tdash-stat__value">@Model.Assignments</div>
+                        }
+                        else
+                        {
+                            <div class="tdash-stat__dash">—</div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="tdash-stat">
+                    <div class="tdash-stat__icon"><i class="bi bi-graph-up"></i></div>
+                    <div class="tdash-stat__body">
+                        <div class="tdash-stat__label">Pending Grades</div>
+                        @if (Model.PendingGrades > 0)
+                        {
+                            <div class="tdash-stat__value">@Model.PendingGrades</div>
+                        }
+                        else
+                        {
+                            <div class="tdash-stat__dash">—</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Classes -->
+    <section class="container-xxl px-4 mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold text-slate-900 m-0">Your Classes</h4>
+
+            <div class="tdash-toolbar d-flex align-items-center">
+                <div class="dash-search input-group me-2">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input id="searchBox" class="form-control" placeholder="Search classes..." />
+                </div>
+
+                <a asp-controller="Classrooms" asp-action="Create" class="btn btn-primary btn-new">
+                    + New Class
+                </a>
+            </div>
+        </div>
+
+        @{
+            var coverClasses = new[] {
+                "cover--blue","cover--indigo","cover--purple","cover--violet","cover--pink",
+                "cover--rose","cover--orange","cover--amber","cover--green","cover--teal"
+                };
+            Func<int, int> pick = id => Math.Abs(id) % coverClasses.Length;
+        }
+
+        <div class="class-carousel" id="classCarousel">
+            <button class="cc-arrow cc-left"
+                    type="button"
+                    aria-label="Previous classes"
+                    title="Previous">
+                &#8249;
+            </button>
+
+            <div class="cc-viewport" id="ccViewport">
+                <div class="cc-track">
+                    @foreach (var cls in Model.Classes ?? Enumerable.Empty<POETWeb.Models.ViewModels.ClassCardVM>())
+                    {
+                        var coverClass = coverClasses[pick(cls.Id)];
+                        <div class="cc-item">
+                            <a class="class-card-link"
+                               asp-controller="Classrooms"
+                               asp-action="Details"
+                               asp-route-id="@cls.Id"
+                               aria-label="Open class @cls.Title details">
+                                <div class="class-card"
+                                     data-title="@cls.Title"
+                                     data-subject="@((cls.Subject ?? ""))">
+                                    <div class="cover @coverClass"></div>
+                                    <div class="class-card-body p-3">
+                                        <div class="fw-bold text-slate-900 class-title">@cls.Title</div>
+                                        @{
+                                            var subj = (cls.Subject ?? "").Trim();
+                                        }
+                                        <div class="subject-line text-slate-600 class-subject">
+                                            <span class="fw-semibold">Subject :</span> @subj
+                                        </div>
+                                        <div class="text-muted">
+                                            @cls.Students @("student" + (cls.Students == 1 ? "" : "s")) enrolled
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <button class="cc-arrow cc-right"
+                    type="button"
+                    aria-label="Next classes"
+                    title="Next">
+                &#8250;
+            </button>
+        </div>
+
+
+    </section>
+
+    <!-- Recent activity -->
+    <section class="container-xxl px-4 pb-5">
+        <div class="tdash-card">
+            <h2 class="h5 fw-bold text-slate-900 mb-3">Recent activity</h2>
+
+            @if (Model.Recent.Count == 0)
+            {
+                <p class="text-slate-600 mb-0">No recent activity.</p>
+            }
+            else
+            {
+                <ul class="list-unstyled mb-0">
+                    @foreach (var r in Model.Recent)
+                    {
+                        <li class="tdash-activity">
+                            <div class="tdash-activity__text">
+                                <strong>@r.StudentName</strong> joined <strong>@r.ClassTitle</strong>
+                            </div>
+                            <div class="tdash-activity__time">@r.TimeAgo</div>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        (function(){
+          // ===== Carousel =====
+          const carousel = document.getElementById('classCarousel');
+          const viewport = document.getElementById('ccViewport');
+          if (!carousel || !viewport) return;
+
+          const track   = viewport.querySelector('.cc-track');
+          const items   = Array.from(track.querySelectorAll('.cc-item'));
+          const btnL    = carousel.querySelector('.cc-left');
+          const btnR    = carousel.querySelector('.cc-right');
+          const perPage = 4;
+
+          function visibleItems() {
+            return items.filter(it => it.style.display !== 'none');
+          }
+
+          function maxScrollLeft(){
+            return viewport.scrollWidth - viewport.clientWidth - 2;
+          }
+
+          function updateArrows(){
+            const vis = visibleItems();
+            if (vis.length <= perPage) {
+              btnL.style.display = 'none';
+              btnR.style.display = 'none';
+              return;
+            }
+            btnL.style.display = (viewport.scrollLeft > 2) ? 'inline-flex' : 'none';
+            btnR.style.display = (viewport.scrollLeft < maxScrollLeft()) ? 'inline-flex' : 'none';
+          }
+
+          function pageWidth(){ return viewport.clientWidth; }
+
+          btnL.addEventListener('click', () => {
+            viewport.scrollBy({ left: -pageWidth(), behavior: 'smooth' });
+            setTimeout(updateArrows, 350);
+          });
+          btnR.addEventListener('click', () => {
+            viewport.scrollBy({ left:  pageWidth(), behavior: 'smooth' });
+            setTimeout(updateArrows, 350);
+          });
+          viewport.addEventListener('scroll', () => {
+            clearTimeout(viewport._t); viewport._t = setTimeout(updateArrows, 100);
+          });
+          window.addEventListener('resize', updateArrows);
+
+          // ===== Search =====
+          const input = document.getElementById('searchBox');
+          const norm = s => (s || "").toString()
+                            .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+                            .toLowerCase().trim();
+
+          function applySearch() {
+            const q = norm(input ? input.value : "");
+            let any = false;
+
+            items.forEach(it => {
+              const card = it.querySelector('.class-card');
+              const title = norm(card?.getAttribute('data-title'));
+              const subj  = norm(card?.getAttribute('data-subject'));
+              const hit = !q || title.includes(q) || subj.includes(q);
+              it.style.display = hit ? '' : 'none';
+              if (hit) any = true;
+            });
+
+            viewport.scrollLeft = 0;
+            updateArrows();
+
+          }
+
+          if (input) {
+            let t=null;
+            input.addEventListener('input', () => {
+              clearTimeout(t); t=setTimeout(applySearch, 120);
+            });
+          }
+
+          updateArrows();
+        })();
+    </script>
+
+
+
+}
+
+

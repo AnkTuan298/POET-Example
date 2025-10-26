@@ -67,3 +67,32 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('.user-menu').forEach(menu => {
+        const trigger = menu.querySelector('.user-trigger');
+        const panel   = menu.querySelector('.user-panel');
+        let hideT;
+
+        const setOpen = (v) => {
+          menu.classList.toggle('is-open', v);
+          if (trigger) trigger.setAttribute('aria-expanded', v ? 'true' : 'false');
+        };
+
+        const open  = () => { clearTimeout(hideT); setOpen(true); };
+        const close = () => { hideT = setTimeout(() => setOpen(false), 160); };
+
+        // mở khi vào trigger hoặc panel
+        trigger?.addEventListener('mouseenter', open);
+        panel?.addEventListener('mouseenter', open);
+
+        // đóng khi rời cả trigger và panel (có độ trễ)
+        trigger?.addEventListener('mouseleave', close);
+        panel?.addEventListener('mouseleave', close);
+
+        // cũng mở khi focus vào trigger (bàn phím)
+        trigger?.addEventListener('focus', open);
+        trigger?.addEventListener('blur', close);
+      });
+    });
+</script>

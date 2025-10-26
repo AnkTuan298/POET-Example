@@ -104,7 +104,7 @@ namespace POETWeb.Areas.Identity.Pages.Account
             public string Email { get; set; }
 
             [Required(ErrorMessage = "Password is required.")]
-            [StringLength(100, ErrorMessage = "The password must be at least {2} characters long.", MinimumLength = 8)]
+            [StringLength(20, ErrorMessage = "The password must be at least {2} characters long.", MinimumLength = 8)]
             [DataType(DataType.Password)]
             [RegularExpression(@"^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?""{}|<>]).{8,}$",
             ErrorMessage = "Password must contain at least one uppercase letter, one number, one special character, and be at least 8 characters long.")]
