@@ -1,47 +1,162 @@
 ﻿@model POETWeb.Models.Domain.Classroom
 
+@using Microsoft.AspNetCore.Identity
+@using POETWeb.Models
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+
 @{
     ViewData["Title"] = "Create Classroom";
+
+    var displayName = User?.Identity?.Name ?? "User";
+    string avatarUrl = Url.Content("~/images/avatar-default.png");
+    if (SignInManager.IsSignedIn(User))
+    {
+        var me  = await UserManager.GetUserAsync(User);
+        var raw = me?.AvatarUrl;
+        if (!string.IsNullOrWhiteSpace(raw))
+            avatarUrl = Url.Content(raw);
+    }
 }
+<nav class="navbar navbar-expand-lg lp-nav bg-white shadow-sm sticky-top py-3">
+    <div class="container-xxl px-4">
+        <a class="navbar-brand d-inline-flex align-items-center"
+           asp-controller="Teacher" asp-action="Index" aria-label="POET Home">
+            <img src="@Url.Content("~/LOGO/POETLOGO.png")" alt="POET" class="brand-logo" />
+        </a>
 
-<h1>Create Classroom</h1>
+            <div class="user-menu ms-3">
+            <button class="user-trigger" type="button" aria-haspopup="true" aria-expanded="false">
+                <img src="@avatarUrl"
+                     alt="Avatar"
+                     class="avatar-sm"
+                     onerror="this.onerror=null;this.src='@Url.Content("~/images/avatar-default.png")';" />
+                <span class="user-trigger__name d-none d-md-inline">@displayName</span>
+                <svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 7l5 6 5-6z" fill="currentColor" /></svg>
+            </button>
 
-<form asp-action="Create">
-    <div class="form-group">
-        <label asp-for="Name" class="control-label"></label>
-        <input asp-for="Name" class="form-control" />
-        <span asp-validation-for="Name" class="text-danger"></span>
+            <div class="user-panel" role="menu" aria-label="Account menu">
+                <div class="user-panel__cap"></div>
+                <div class="user-panel__header">@displayName</div>
+
+                <a class="user-item" role="menuitem"
+                   asp-area="Identity" asp-page="/Account/Manage/Index">Profile</a>
+
+                <form class="m-0" asp-area="Identity" asp-page="/Account/Logout" method="post">
+                    <button type="submit" class="user-item-btn" role="menuitem">Log out</button>
+                </form>
+            </div>
+        </div>
+</div>
+</nav>
+
+<div class="tdash-wrap">
+<div class="container py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="fw-bold text-slate-900 m-0">Create Classroom</h3>
     </div>
 
-    <div class="form-group">
-        <label asp-for="Subject" class="control-label"></label>
-        <input asp-for="Subject" class="form-control" />
-        <span asp-validation-for="Subject" class="text-danger"></span>
-    </div>
+    <div class="row g-4">
+        <div class="col-12 col-lg-7">
+            <div class="tdash-card p-3">
+                <div class="mb-2">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                </div>
 
-    <div class="form-group">
-        <input type="submit" value="Create" class="btn btn-primary" />
+                <form asp-action="Create" method="post" class="form-section">
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label fw-semibold"></label>
+                        <input asp-for="Name" class="form-control" id="fldName" placeholder="e.g. Lớp 9" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Subject" class="form-label fw-semibold"></label>
+                        <input asp-for="Subject" class="form-control" id="fldSubject" placeholder="e.g. Tin học" />
+                        <span asp-validation-for="Subject" class="text-danger"></span>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary px-4">Create</button>
+                        <a asp-controller="Teacher" asp-action="Index" class="btn btn-light">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-5">
+            <div class="tdash-card p-3">
+                <div class="fw-semibold text-slate-900 mb-2">Live preview</div>
+
+                <div class="class-card">
+                    <div id="prevCover" class="cover cover--blue" style="height:132px;"></div>
+                    <div class="class-card-body p-3">
+                        <div id="prevTitle" class="fw-bold text-slate-900">Lớp mới</div>
+                        <div class="subject-line text-slate-600">
+                            <span class="fw-semibold">Subject :</span> <span id="prevSubject">—</span>
+                        </div>
+                        <div class="text-muted">0 students enrolled</div>
+                    </div>
+                </div>
+
+                <div class="small text-slate-600 mt-2">
+                </div>
+            </div>
+        </div>
     </div>
-</form>
-<form asp-action="Create" method="post">
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-    <div class="mb-3">
-        <label asp-for="Name" class="form-label"></label>
-        <input asp-for="Name" class="form-control" />
-        <span asp-validation-for="Name" class="text-danger"></span>
-    </div>
-    <div class="mb-3">
-        <label asp-for="Subject" class="form-label"></label>
-        <input asp-for="Subject" class="form-control" />
-        <span asp-validation-for="Subject" class="text-danger"></span>
-    </div>
-    <button class="btn btn-primary" type="submit">Create</button>
-    <a class="btn btn-secondary" asp-action="Index">Back</a>
-</form>
+</div>
+</div>
+
+<style>
+    html, body {
+        height: 100%;
+        overflow-y: hidden;
+        overscroll-behavior: none;
+    }
+</style>
+
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-}
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
+    <script>
+        (function () {
+            const nameInput = document.getElementById('fldName')
+                || document.querySelector('input[name="Name"]');
+            const subjInput = document.getElementById('fldSubject')
+                || document.querySelector('input[name="Subject"]');
+
+            const prevTitle = document.getElementById('prevTitle');
+            const prevSubject = document.getElementById('prevSubject');
+
+            const upTitle = () => prevTitle.textContent = (nameInput?.value?.trim() || 'Lớp mới');
+            const upSubject = () => prevSubject.textContent = (subjInput?.value?.trim() || '—');
+
+            nameInput?.addEventListener('input', upTitle);
+            subjInput?.addEventListener('input', upSubject);
+            upTitle(); upSubject();
+        })();
+
+            document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.user-menu').forEach(menu => {
+            const trigger = menu.querySelector('.user-trigger');
+            const panel   = menu.querySelector('.user-panel');
+            let hideT;
+            const setOpen = v => {
+              menu.classList.toggle('is-open', v);
+              trigger?.setAttribute('aria-expanded', v ? 'true' : 'false');
+            };
+            const open  = () => { clearTimeout(hideT); setOpen(true);  };
+            const close = () => { hideT = setTimeout(() => setOpen(false), 160); };
+            trigger?.addEventListener('mouseenter', open);
+            panel  ?.addEventListener('mouseenter', open);
+            trigger?.addEventListener('mouseleave', close);
+            panel  ?.addEventListener('mouseleave', close);
+            trigger?.addEventListener('focus', open);
+            trigger?.addEventListener('blur', close);
+          });
+        });
+    </script>
+}
