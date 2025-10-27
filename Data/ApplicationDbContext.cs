@@ -14,6 +14,8 @@ namespace POETWeb.Data
 
         public DbSet<Classroom> Classrooms => Set<Classroom>();
         public DbSet<Enrollment> Enrollments => Set<Enrollment>();
+        public DbSet<Material> Materials { get; set; } = default!;
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
