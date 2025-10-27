@@ -1,0 +1,42 @@
+﻿@model POETWeb.Models.Domain.Classroom
+<div class="p-2">
+    <h5 class="mb-1 text-slate-900">
+        @Model.Name <small class="text-slate-600">(@Model.ClassCode)</small>
+    </h5>
+    <div class="text-slate-600 mb-2"><b>Subject:</b> @Model.Subject</div>
+
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <strong>Teacher:</strong>
+        <img src="@(Model.Teacher?.AvatarUrl ?? "https://via.placeholder.com/72?text=👩‍🏫")"
+             class="avatar-sm" alt="teacher" />
+        <span>@(Model.Teacher?.FullName ?? "Unknown")</span>
+    </div>
+
+    <hr class="my-3" />
+
+    <div class="d-flex flex-wrap gap-2">
+        @if (User.IsInRole("Teacher"))
+        {
+            @if (User.IsInRole("Teacher"))
+            {
+                <a class="btn btn-grad-blue me-2" asp-action="Roster" asp-route-id="@Model.Id">Student List</a>
+                <a class="btn btn-grad-green me-2" asp-controller="Materials" asp-action="Index" asp-route-classId="@Model.Id">Materials</a>
+
+                <button type="button"
+                        class="btn btn-grad-rose js-delete-class"
+                        data-delete-url="@Url.Action("Delete", "Classrooms", new { id = Model.Id })"
+                        data-class-name="@Model.Name"
+                        data-class-code="@Model.ClassCode">
+                    Delete
+                </button>
+            }
+
+        }
+
+        @if (User.IsInRole("Student"))
+        {
+            <a class="btn btn-info" asp-action="RosterStudent" asp-route-id="@Model.Id">Student List</a>
+            <a class="btn btn-success" asp-controller="Materials" asp-action="Index" asp-route-classId="@Model.Id">Materials</a>
+        }
+    </div>
+</div>

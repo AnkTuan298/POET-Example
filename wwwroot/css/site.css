@@ -957,4 +957,117 @@ section h2 {
     display: block;
 }
 
+/* Cấm chọn/kéo trên thẻ lớp */
+.class-card-link {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+    .class-card-link img {
+        pointer-events: none;
+        -webkit-user-drag: none;
+    }
+
+/* ==== Gradient buttons ==== */
+.btn-grad-blue {
+    border: 0;
+    color: #fff !important;
+    background: linear-gradient(90deg,#60a5fa 0%, #2563eb 100%);
+    box-shadow: 0 8px 20px rgba(37,99,235,.15);
+}
+
+    .btn-grad-blue:hover {
+        filter: brightness(1.05);
+    }
+
+.btn-grad-green {
+    border: 0;
+    color: #fff !important;
+    background: linear-gradient(90deg,#34d399 0%, #10b981 100%);
+    box-shadow: 0 8px 20px rgba(16,185,129,.15);
+}
+
+    .btn-grad-green:hover {
+        filter: brightness(1.05);
+    }
+
+.btn-grad-rose {
+    border: 0;
+    color: #fff !important;
+    background: linear-gradient(90deg,#fb7185 0%, #ef4444 100%);
+    box-shadow: 0 8px 20px rgba(239,68,68,.18);
+}
+
+    .btn-grad-rose:hover {
+        filter: brightness(1.05);
+    }
+
+    .btn-grad-blue:focus, .btn-grad-green:focus, .btn-grad-rose:focus {
+        outline: 0;
+        box-shadow: 0 0 0 0.15rem rgba(59,130,246,.25);
+    }
+
+/* ==== Backdrop ==== */
+.modal-backdrop.backdrop-strong {
+    background-color: rgba(15,23,42,.55);
+    backdrop-filter: blur(2px);
+}
+
+#globalConfirmDelete {
+    z-index: 1065;
+}
+
+.modal-backdrop.backdrop-strong {
+    background-color: rgba(15,23,42,.55);
+    backdrop-filter: blur(2px);
+}
+
+.modal-backdrop.backdrop-over-qv {
+    z-index: 1060 !important;
+}
+
+/* Cancel */
+.btn-soft-slate {
+    --ring: rgba(148,163,184,.35);
+    color: #0f172a !important;
+    background: #e5e7eb;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 6px 18px rgba(15,23,42,.06);
+}
+
+    .btn-soft-slate:hover {
+        background: #e2e8f0;
+        filter: brightness(1.02);
+    }
+
+    .btn-soft-slate:focus {
+        outline: 0;
+        box-shadow: 0 0 0 .15rem var(--ring);
+    }
+
+/* Delete */
+.btn-grad-rose {
+    border: 0;
+    color: #fff !important;
+    background: linear-gradient(90deg,#fb7185 0%, #ef4444 100%);
+    box-shadow: 0 10px 24px rgba(239,68,68,.22);
+}
+
+    .btn-grad-rose:hover {
+        filter: brightness(1.05);
+    }
+
+    .btn-grad-rose:focus {
+        outline: 0;
+        box-shadow: 0 0 0 .15rem rgba(244,63,94,.35);
+    }
+
+#globalConfirmDelete .modal-footer .btn {
+    min-width: 115px;
+    border-radius: 10px;
+}
+
+
+
 

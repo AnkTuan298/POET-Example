@@ -176,11 +176,15 @@
                     {
                         var coverClass = coverClasses[pick(cls.Id)];
                         <div class="cc-item">
-                            <a class="class-card-link"
+                            <a class="class-card-link js-class-quickview"
                                asp-controller="Classrooms"
                                asp-action="Details"
                                asp-route-id="@cls.Id"
-                               aria-label="Open class @cls.Title details">
+                               data-class-id="@cls.Id"
+                               data-url="@Url.Action("DetailsPartial","Classrooms", new { id = cls.Id })"
+                               aria-label="Open class @cls.Title details"
+                               role="button"
+                               tabindex="0">
                                 <div class="class-card"
                                      data-title="@cls.Title"
                                      data-subject="@((cls.Subject ?? ""))">
@@ -242,91 +246,260 @@
     </section>
 </div>
 
+<!-- Quick View Modal -->
+<div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0" style="border-radius:16px;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-slate-900">Class quick view</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div id="qvBody" class="modal-body">
+                <div class="text-center py-5">
+                    <div class="spinner-border" role="status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Delete -->
+<div class="modal fade" id="globalConfirmDelete" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0" style="border-radius:16px;">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title text-danger">Delete class?</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+				You can not undo this action. Are you sure you want to delete the class ?
+                <div class="text-slate-900 mt-1">
+                    <span id="gcdName"></span>
+                    <small class="text-muted" id="gcdCode"></small>
+                </div>
+                <div class="text-danger small mt-2 d-none" id="gcdError">Có lỗi khi xóa. Thử lại sau.</div>
+            </div>
+            <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
+                <button type="button" class="btn btn-soft-slate" data-bs-dismiss="modal">Cancel</button>
+                <form id="gcdForm" method="post" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <button id="gcdSubmit" type="submit" class="btn btn-grad-rose">
+                        <span class="label">Yes, delete</span>
+                        <span class="spinner-border spinner-border-sm ms-2 d-none" aria-hidden="true"></span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Success -->
+<div class="modal fade" id="globalDeleteSuccess" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="border-radius:16px;">
+            <div class="modal-body text-center py-4">
+                <div class="brand-bubble mb-3">✔</div>
+                <h5 class="mb-1 text-slate-900">Delete successful</h5>
+                <div class="text-slate-600">Đang quay về danh sách…</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
-        (function(){
-          // ===== Carousel =====
-          const carousel = document.getElementById('classCarousel');
-          const viewport = document.getElementById('ccViewport');
-          if (!carousel || !viewport) return;
+        document.addEventListener('DOMContentLoaded', function () {
 
-          const track   = viewport.querySelector('.cc-track');
-          const items   = Array.from(track.querySelectorAll('.cc-item'));
-          const btnL    = carousel.querySelector('.cc-left');
-          const btnR    = carousel.querySelector('.cc-right');
-          const perPage = 4;
+          /* ===== Carousel + Search ===== */
+          (function () {
+            const carousel = document.getElementById('classCarousel');
+            const viewport = document.getElementById('ccViewport');
+            if (!carousel || !viewport) return;
 
-          function visibleItems() {
-            return items.filter(it => it.style.display !== 'none');
-          }
+            const track = viewport.querySelector('.cc-track');
+            const items = Array.from(track.querySelectorAll('.cc-item'));
+            const btnL  = carousel.querySelector('.cc-left');
+            const btnR  = carousel.querySelector('.cc-right');
+            const perPage = 4;
 
-          function maxScrollLeft(){
-            return viewport.scrollWidth - viewport.clientWidth - 2;
-          }
+            const visibleItems = () => items.filter(it => it.style.display !== 'none');
+            const maxScrollLeft = () => viewport.scrollWidth - viewport.clientWidth - 2;
+            const pageWidth = () => viewport.clientWidth;
 
-          function updateArrows(){
-            const vis = visibleItems();
-            if (vis.length <= perPage) {
-              btnL.style.display = 'none';
-              btnR.style.display = 'none';
-              return;
+            function updateArrows() {
+              const vis = visibleItems();
+              if (vis.length <= perPage) { btnL?.style.setProperty('display','none'); btnR?.style.setProperty('display','none'); return; }
+              if (btnL) btnL.style.display = (viewport.scrollLeft > 2) ? 'inline-flex' : 'none';
+              if (btnR) btnR.style.display = (viewport.scrollLeft < maxScrollLeft()) ? 'inline-flex' : 'none';
             }
-            btnL.style.display = (viewport.scrollLeft > 2) ? 'inline-flex' : 'none';
-            btnR.style.display = (viewport.scrollLeft < maxScrollLeft()) ? 'inline-flex' : 'none';
-          }
 
-          function pageWidth(){ return viewport.clientWidth; }
+            btnL?.addEventListener('click', () => { viewport.scrollBy({ left: -pageWidth(), behavior: 'smooth' }); setTimeout(updateArrows, 350); });
+            btnR?.addEventListener('click', () => { viewport.scrollBy({ left:  pageWidth(), behavior: 'smooth' }); setTimeout(updateArrows, 350); });
+            viewport.addEventListener('scroll', () => { clearTimeout(viewport._t); viewport._t = setTimeout(updateArrows, 100); });
+            window.addEventListener('resize', updateArrows);
 
-          btnL.addEventListener('click', () => {
-            viewport.scrollBy({ left: -pageWidth(), behavior: 'smooth' });
-            setTimeout(updateArrows, 350);
-          });
-          btnR.addEventListener('click', () => {
-            viewport.scrollBy({ left:  pageWidth(), behavior: 'smooth' });
-            setTimeout(updateArrows, 350);
-          });
-          viewport.addEventListener('scroll', () => {
-            clearTimeout(viewport._t); viewport._t = setTimeout(updateArrows, 100);
-          });
-          window.addEventListener('resize', updateArrows);
+            const input = document.getElementById('searchBox');
+            const norm = s => (s || "").toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
-          // ===== Search =====
-          const input = document.getElementById('searchBox');
-          const norm = s => (s || "").toString()
-                            .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-                            .toLowerCase().trim();
+            function applySearch() {
+              const q = norm(input ? input.value : "");
+              items.forEach(it => {
+                const card = it.querySelector('.class-card');
+                const t = norm(card?.getAttribute('data-title'));
+                const sb = norm(card?.getAttribute('data-subject'));
+                it.style.display = (!q || t.includes(q) || sb.includes(q)) ? '' : 'none';
+              });
+              viewport.scrollLeft = 0;
+              updateArrows();
+            }
 
-          function applySearch() {
-            const q = norm(input ? input.value : "");
-            let any = false;
+            if (input) {
+              let t = null;
+              input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(applySearch, 120); });
+            }
 
-            items.forEach(it => {
-              const card = it.querySelector('.class-card');
-              const title = norm(card?.getAttribute('data-title'));
-              const subj  = norm(card?.getAttribute('data-subject'));
-              const hit = !q || title.includes(q) || subj.includes(q);
-              it.style.display = hit ? '' : 'none';
-              if (hit) any = true;
-            });
-
-            viewport.scrollLeft = 0;
             updateArrows();
+          })();
 
+          /* ===== Quick View ===== */
+          const qvEl   = document.getElementById('quickViewModal');
+          const qvBody = document.getElementById('qvBody');
+          const qv     = qvEl ? bootstrap.Modal.getOrCreateInstance(qvEl, { backdrop: true, keyboard: true }) : null;
+          let qvBusy = false;
+
+          function cleanBackdrops() {
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('padding-right');
           }
 
-          if (input) {
-            let t=null;
-            input.addEventListener('input', () => {
-              clearTimeout(t); t=setTimeout(applySearch, 120);
-            });
+          async function openQuickView(url) {
+            if (!qv || qvBusy || !url) return;
+            qvBusy = true;
+            cleanBackdrops();
+            qvBody.innerHTML = '<div class="text-center py-5"><div class="spinner-border" role="status" aria-label="Loading"></div></div>';
+            qv.show();
+            try {
+              const html = await fetch(url, { credentials: 'same-origin' }).then(r => { if (!r.ok) throw new Error(r.status); return r.text(); });
+              qvBody.innerHTML = html;
+              wireDeleteButtonInQuickView(qvBody); // gắn delete trong partial nếu có
+            } catch (err) {
+              console.error('[QuickView] fetch error:', err);
+              qvBody.innerHTML = '<div class="text-danger text-center p-4">Không tải được chi tiết.</div>';
+            } finally {
+              qvBusy = false;
+            }
           }
 
-          updateArrows();
-        })();
+          qvEl?.addEventListener('hidden.bs.modal', () => {
+            cleanBackdrops();
+            qvBody.innerHTML = '';
+            qvBusy = false;
+          }, { passive: true });
+
+          // Delegation
+          document.addEventListener('click', function (e) {
+            const link = e.target.closest('.js-class-quickview');
+            if (!link) return;
+
+            // chặn middle/Ctrl/Cmd
+            if (e.button === 1 || e.ctrlKey || e.metaKey) { e.preventDefault(); return; }
+            e.preventDefault();
+
+            const url = link.getAttribute('data-url') || (link.href ? link.href.replace('/Details', '/DetailsPartial') : null);
+            openQuickView(url);
+          });
+
+          document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            const link = e.target.closest?.('.js-class-quickview');
+            if (!link) return;
+            e.preventDefault();
+            const url = link.getAttribute('data-url') || (link.href ? link.href.replace('/Details', '/DetailsPartial') : null);
+            openQuickView(url);
+          });
+
+          document.addEventListener('contextmenu', function (e) {
+            if (e.target.closest('.js-class-quickview')) e.preventDefault();
+          }, { capture: true });
+
+          document.addEventListener('dragstart', function (e) {
+            if (e.target.closest('.js-class-quickview')) e.preventDefault();
+          });
+
+          /* ===== Delete (confirm + success) ===== */
+          const gcdEl     = document.getElementById('globalConfirmDelete');
+          const gcdForm   = document.getElementById('gcdForm');
+          const gcdBtn    = document.getElementById('gcdSubmit');
+          const gcdErr    = document.getElementById('gcdError');
+          const gcdName   = document.getElementById('gcdName');
+          const gcdCode   = document.getElementById('gcdCode');
+          const gSuccessEl= document.getElementById('globalDeleteSuccess');
+
+          const gConfirm  = gcdEl     ? bootstrap.Modal.getOrCreateInstance(gcdEl)                                       : null;
+          const gSuccess  = gSuccessEl? bootstrap.Modal.getOrCreateInstance(gSuccessEl, { backdrop:'static', keyboard:false }) : null;
+          const backUrl   = '@Url.Action("Index", "Teacher")';
+
+          // gọi trong partial sau khi load
+          function wireDeleteButtonInQuickView(scope) {
+            const btn = scope.querySelector('.js-delete-class');
+            if (!btn) return;
+
+            btn.addEventListener('click', function () {
+              const url  = this.getAttribute('data-delete-url');
+              const name = this.getAttribute('data-class-name') || '';
+              const code = this.getAttribute('data-class-code') ? `(${this.getAttribute('data-class-code')})` : '';
+
+              gcdForm?.setAttribute('action', url);
+              if (gcdName) gcdName.textContent = name;
+              if (gcdCode) gcdCode.textContent = ' ' + code;
+              gcdErr?.classList.add('d-none');
+              gcdBtn?.removeAttribute('disabled');
+              gcdBtn?.querySelector('.spinner-border')?.classList.add('d-none');
+
+              gConfirm?.show();
+
+              // backdrop confirm nằm giữa QV(1055) và confirm(1065)
+              setTimeout(() => {
+                const backs = document.querySelectorAll('.modal-backdrop');
+                if (backs.length) backs[backs.length - 1].classList.add('backdrop-strong', 'backdrop-over-qv');
+              }, 0);
+            }, { once: true });
+          }
+
+          gcdForm?.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            gcdErr?.classList.add('d-none');
+            gcdBtn?.setAttribute('disabled', 'disabled');
+            gcdBtn?.querySelector('.spinner-border')?.classList.remove('d-none');
+
+            try {
+              const fd = new FormData(gcdForm);
+              const resp = await fetch(gcdForm.action, {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+              });
+              if (!resp.ok) throw new Error('Delete failed');
+
+              gConfirm?.hide();
+              qv?.hide();
+              gSuccess?.show();
+              setTimeout(() => { window.location.href = backUrl; }, 2000);
+            } catch (ex) {
+              gcdErr?.classList.remove('d-none');
+              gcdBtn?.removeAttribute('disabled');
+              gcdBtn?.querySelector('.spinner-border')?.classList.add('d-none');
+              console.error(ex);
+            }
+          });
+
+        });
     </script>
-
-
-
 }
+
+
+
 
 

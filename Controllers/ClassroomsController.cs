@@ -37,7 +37,7 @@ namespace POETWeb.Controllers
             var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
 
             ViewBag.Total = total; ViewBag.Page = page; ViewBag.PageSize = pageSize;
-            return View(items);
+            return RedirectToAction("Index", "Teacher");
         }
 
         // Xem chi tiết lớp
@@ -45,28 +45,26 @@ namespace POETWeb.Controllers
         [Authorize(Roles = "Teacher,Student")]
         public async Task<IActionResult> Details(int id)
         {
-
             var cls = await _db.Classrooms
                 .AsNoTracking()
                 .Include(c => c.Teacher)
                 .FirstOrDefaultAsync(c => c.Id == id);
-
             if (cls == null) return NotFound();
 
             if (User.IsInRole("Teacher"))
             {
-                // giáo viên chỉ xem lớp của mình
                 await EnsureOwnerAsync(cls.TeacherId);
-                return View(cls);
+                return RedirectToAction("Index", "Teacher");
             }
 
-            // student phải là người đã join mới xem được
+            // Student phải join mới được xem
             var me = await _userManager.GetUserAsync(User);
             bool joined = await _db.Enrollments.AnyAsync(e => e.ClassId == id && e.UserId == me!.Id);
             if (!joined) return Forbid();
 
-            return View(cls);
+            return RedirectToAction("Index", "Teacher");
         }
+
 
         [Authorize(Roles = "Teacher")]
         public IActionResult Create() => View(new Classroom());
@@ -97,7 +95,7 @@ namespace POETWeb.Controllers
 
             _db.Classrooms.Add(model);
             await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(Details), new { id = model.Id });
+            return RedirectToAction("Index", "Teacher");
         }
 
         [Authorize(Roles = "Teacher")]
@@ -106,7 +104,7 @@ namespace POETWeb.Controllers
             var cls = await _db.Classrooms.FindAsync(id);
             if (cls == null) return NotFound();
             await EnsureOwnerAsync(cls.TeacherId);
-            return View(cls);
+            return RedirectToAction("Index", "Teacher");
         }
 
         [HttpPost, ValidateAntiForgeryToken]
@@ -122,7 +120,7 @@ namespace POETWeb.Controllers
             cls.Name = input.Name;
             cls.Subject = input.Subject;
             await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(Details), new { id = cls.Id });
+            return RedirectToAction("Index", "Teacher");
         }
 
         [Authorize(Roles = "Teacher")]
@@ -131,7 +129,7 @@ namespace POETWeb.Controllers
             var cls = await _db.Classrooms.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
             if (cls == null) return NotFound();
             await EnsureOwnerAsync(cls.TeacherId);
-            return View(cls);
+            return RedirectToAction("Index", "Teacher");
         }
 
         [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
@@ -140,12 +138,20 @@ namespace POETWeb.Controllers
         {
             var cls = await _db.Classrooms.FirstOrDefaultAsync(c => c.Id == id);
             if (cls == null) return NotFound();
+
             await EnsureOwnerAsync(cls.TeacherId);
+
+            var deletedName = cls.Name;                 
 
             _db.Classrooms.Remove(cls);
             await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+
+            TempData["JustDeleted"] = true;
+            TempData["DeletedClassName"] = deletedName;
+
+            return RedirectToAction("Index", "Teacher");
         }
+
 
         // Danh sách học viên cho giáo viên
         [Authorize(Roles = "Teacher")]
@@ -178,6 +184,17 @@ namespace POETWeb.Controllers
             ViewBag.ClassCode = cls.ClassCode;
             return View(items);
         }
+
+        [Authorize]
+        public async Task<IActionResult> DetailsPartial(int id)
+        {
+            var cls = await _db.Classrooms
+                .Include(c => c.Teacher)
+                .FirstOrDefaultAsync(c => c.Id == id);
+            if (cls == null) return NotFound();
+            return PartialView("_DetailsModal", cls);
+        }
+
 
         // ===== STUDENT ZONE =====
 
@@ -223,7 +240,8 @@ namespace POETWeb.Controllers
                 await _db.SaveChangesAsync();
             }
 
-            return RedirectToAction(nameof(Details), new { id = cls.Id });
+            return RedirectToAction("Index", "Student");
+
         }
 
         [Authorize(Roles = "Student")]
@@ -277,6 +295,11 @@ namespace POETWeb.Controllers
         {
             var me = await _userManager.GetUserAsync(User);
             if (me!.Id != teacherId) throw new UnauthorizedAccessException("Not your class.");
+        }
+        private IActionResult GoTeacherOpen(int classId)
+        {
+            TempData["OpenClassId"] = classId;
+            return RedirectToAction("Index", "Teacher");
         }
     }
 }
