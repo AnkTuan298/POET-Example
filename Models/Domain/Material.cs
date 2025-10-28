@@ -40,6 +40,8 @@ namespace POETWeb.Models.Domain
         [StringLength(50)]
         public string? Category { get; set; }
 
+        public string? IndexContent { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 

@@ -1,0 +1,204 @@
+﻿@model IEnumerable<POETWeb.Models.Domain.Material>
+@{
+    ViewData["Title"] = "Materials";
+    var classId = (int)ViewBag.ClassId;
+    var className = (string)ViewBag.ClassName;
+    var classCode = (string)ViewBag.ClassCode;
+    var isOwner = (ViewBag.IsOwner as bool?) ?? false;
+}
+
+    <div class="container-xxl px-4 py-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="fw-bold text-slate-900 m-0">Materials • @className</h4>
+                <div class="text-slate-600 small">Class code: @classCode</div>
+            </div>
+            <div class="d-flex gap-2">
+                @if (isOwner)
+                {
+                    <a class="btn btn-grad-green" asp-action="Create" asp-route-classId="@classId">+ Add material</a>
+                }
+                <a class="btn btn-soft-slate" asp-controller="Teacher" asp-action="Index">Back</a>
+            </div>
+        </div>
+
+        <div class="tdash-card p-3" id="materialsList">
+            @if (!Model.Any())
+            {
+                <div class="text-slate-600">No materials yet.</div>
+            }
+            else
+            {
+                <div class="d-flex flex-column gap-3">
+                    @foreach (var m in Model)
+                    {
+                        var rid = $"mat-{m.Id}";
+                        <article class="mat-card">
+                            <div class="mat-card__row">
+                                <button class="mat-card__toggle mat-toggle" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#@rid"
+                                        aria-expanded="false" aria-controls="@rid">
+                                    <i class="bi bi-chevron-down chev" aria-hidden="true"></i>
+                                </button>
+
+                                <div class="mat-card__main">
+                                    <div class="mat-card__title">@m.Title</div>
+                                    <div class="mat-card__meta">
+                                        <span class="text-slate-600">@m.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                                        @if (!string.IsNullOrWhiteSpace(m.Description))
+                                        {
+                                            <span class="dot">•</span>
+                                            <span class="text-slate-600">@m.Description</span>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (isOwner)
+                                {
+                                    <div class="mat-card__actions">
+                                        <a class="btn btn-sm btn-grad-indigo mat-action me-1"
+                                           asp-action="Edit" asp-route-id="@m.Id">Edit</a>
+                                        <form asp-action="Delete" asp-route-id="@m.Id" method="post" class="d-inline mat-action">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-grad-rose"
+                                                    onclick="return confirm('Delete this material?');">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                }
+                            </div>
+
+                            <div id="@rid" class="collapse mat-content" aria-labelledby="@rid">
+                                <div class="mat-card__body">
+                                    @{
+                                        bool printed = false;
+
+                                        // 1) VIDEO/URL
+                                        if (!string.IsNullOrWhiteSpace(m.ExternalUrl))
+                                        {
+                                            var youId = "";
+                                            try
+                                            {
+                                                var u = new Uri(m.ExternalUrl);
+                                                if (u.Host.Contains("youtube.com"))
+                                                    youId = System.Web.HttpUtility.ParseQueryString(u.Query).Get("v") ?? "";
+                                                else if (u.Host.Contains("youtu.be"))
+                                                    youId = u.AbsolutePath.Trim('/');
+                                            }
+                                            catch { }
+
+                                            if (!string.IsNullOrEmpty(youId))
+                                            {
+                                                <div class="ratio ratio-16x9 mb-3">
+                                                    <iframe src="https://www.youtube.com/embed/@youId"
+                                                            title="@m.Title" allowfullscreen loading="lazy"></iframe>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <a class="btn btn-soft-slate mb-2" href="@m.ExternalUrl" target="_blank" rel="noopener">Open link</a>
+                                            }
+                                            printed = true;
+                                        }
+
+                                        // 2) INDEX
+                                        if (!string.IsNullOrWhiteSpace(m.IndexContent))
+                                        {
+                                            if (printed)
+                                            {
+
+                                                <hr class="mat-divider" aria-hidden="true" />
+                                                ;
+                                            }
+                                            <div class="mat-index">@Html.Raw(m.IndexContent)</div>
+                                            printed = true;
+                                        }
+
+                                        // 3) FILE
+                                        if (!string.IsNullOrWhiteSpace(m.FileUrl))
+                                        {
+                                            if (printed)
+                                            {
+
+                                                <hr class="mat-divider" aria-hidden="true" />
+                                                ;
+                                            }
+                                            <div class="mb-1">
+                                                <a class="btn btn-soft-slate" href="@Url.Content(m.FileUrl)" target="_blank" rel="noopener">
+                                                    @(m.OriginalFileName ?? "Download file")
+                                                </a>
+                                                @if (m.FileSizeBytes.HasValue)
+                                                {
+                                                    <span class="text-muted small ms-2">(@String.Format("{0:N0} KB", m.FileSizeBytes.Value / 1024))</span>
+                                                }
+                                            </div>
+                                            printed = true;
+                                        }
+
+                                        if (!printed)
+                                        {
+                                            <span class="text-muted">No content.</span>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+          document.querySelectorAll('.mat-action').forEach(el=>{
+            el.addEventListener('click', e=>e.stopPropagation());
+            el.addEventListener('mousedown', e=>e.stopPropagation());
+          });
+
+          document.querySelectorAll('.mat-card').forEach(card=>{
+            const btn = card.querySelector('.mat-toggle');
+            const id  = btn?.getAttribute('aria-controls');
+            const tgt = id ? document.getElementById(id) : null;
+            if(!btn || !tgt) return;
+
+            btn.addEventListener('click', function(e){
+              if(e.target.closest('.mat-action')) return;
+              const inst = bootstrap.Collapse.getOrCreateInstance(tgt);
+              inst.toggle();
+            });
+
+            tgt.addEventListener('show.bs.collapse', ()=>btn.setAttribute('aria-expanded','true'));
+            tgt.addEventListener('hide.bs.collapse', ()=>btn.setAttribute('aria-expanded','false'));
+          });
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+          document.querySelectorAll('#materialsList .mat-action').forEach(el=>{
+            ['click','mousedown'].forEach(ev=>el.addEventListener(ev, e=>e.stopPropagation()));
+          });
+
+          document.querySelectorAll('#materialsList .mat-content').forEach(sec=>{
+            sec.addEventListener('shown.bs.collapse', ()=>{
+              sec.closest('.mat-card')?.classList.add('is-open');
+            });
+            sec.addEventListener('hidden.bs.collapse', ()=>{
+              sec.closest('.mat-card')?.classList.remove('is-open');
+            });
+          });
+        });
+
+        document.addEventListener('DOMContentLoaded', ()=> {
+            document.body.classList.add('materials-page');
+        });
+
+        document.addEventListener('DOMContentLoaded', ()=>{
+          document.body.style.removeProperty('padding-right');
+          document.querySelectorAll('.modal-backdrop').forEach(b=>b.remove());
+        });
+
+    </script>
+}

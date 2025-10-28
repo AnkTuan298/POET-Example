@@ -1,0 +1,63 @@
+﻿@model POETWeb.Models.Domain.Material
+@{
+    ViewData["Title"] = "Edit material";
+    var classId = (int)ViewBag.ClassId;
+}
+
+<div class="container-xxl px-4 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold text-slate-900 m-0">Edit material</h4>
+        <a class="btn btn-soft-slate" asp-action="Index" asp-route-classId="@classId">Back</a>
+    </div>
+
+    <div class="tdash-card p-3">
+        <form asp-action="Edit" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="ClassId" />
+
+            <div class="mb-3">
+                <label asp-for="Title" class="form-label fw-semibold"></label>
+                <input asp-for="Title" class="form-control" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label fw-semibold"></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Replace file (optional)</label>
+                <input type="file" name="file" class="form-control" />
+                @if (!string.IsNullOrWhiteSpace(Model.FileUrl))
+                {
+                    <div class="form-text">
+                        Current: <a href="@Url.Content(Model.FileUrl)" target="_blank" rel="noopener">
+                            @(Model.OriginalFileName ?? "download")
+                        </a>
+                    </div>
+                }
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">External URL (optional)</label>
+                <input type="url" name="externalUrl" class="form-control" value="@Model.ExternalUrl"/>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="IndexContent" class="form-label">Index</label>
+                <textarea asp-for="IndexContent" class="form-control" rows="5" ></textarea>
+                <span asp-validation-for="IndexContent" class="text-danger"></span>
+            </div>
+
+
+            <button type="submit" class="btn btn-grad-indigo">Save</button>
+            <a class="btn btn-soft-slate ms-2" asp-action="Index" asp-route-classId="@classId">Cancel</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
