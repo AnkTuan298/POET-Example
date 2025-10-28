@@ -1,0 +1,39 @@
+﻿@model ClassQuickViewVM
+@using POETWeb.Models.ViewModels;
+
+<div class="qv-stu">
+    <div class="mb-2">
+        <div class="h6 mb-1">
+            @Model.Title <small class="text-muted">(@Model.ClassCode)</small>
+        </div>
+        <div class="mb-1"><span class="fw-semibold">Subject:</span> @Model.Subject</div>
+
+        <div class="d-flex align-items-center gap-2">
+            <span class="fw-semibold">Teacher:</span>
+            <img src="@Url.Content(Model.TeacherAvatar ?? "~/images/avatar-default.png")"
+                 class="avatar-sm qv-avatar" alt="Teacher"
+                 onerror="this.src='@Url.Content("~/images/avatar-default.png")'">
+            <span>@Model.TeacherName</span>
+        </div>
+    </div>
+
+    <hr class="my-3" />
+
+    <div class="d-flex justify-content-between">
+        <div>
+            <a class="btn btn-stu me-2"
+               asp-controller="Student" asp-action="Roster" asp-route-classId="@Model.Id">
+                Student list
+            </a>
+
+            <a class="btn btn-mat"
+               asp-controller="Materials" asp-action="Index" asp-route-classId="@Model.Id">
+                Materials
+            </a>
+        </div>
+
+        <button type="button" class="btn btn-grad-rose" data-leave-class="@Model.Id">
+            Leave class
+        </button>
+    </div>
+</div>

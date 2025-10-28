@@ -82,6 +82,9 @@ namespace POETWeb.Controllers
             ViewBag.ClassName = cls.Name;
             ViewBag.ClassCode = cls.ClassCode;
             ViewBag.IsOwner = await IsOwnerAsync(classId);
+            ViewBag.BackTo = User.IsInRole("Teacher")
+            ? Url.Action("Index", "Teacher")
+            : Url.Action("Index", "Student");
 
             return View(list);
         }

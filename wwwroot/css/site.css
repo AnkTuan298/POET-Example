@@ -1483,5 +1483,69 @@ section h2 {
     background: radial-gradient(100px 100px at 100px 40px, rgba(79,70,229,.10), rgba(79,70,229,0) 70%) !important;
 }
 
+.backdrop-strong {
+    opacity: .6 !important;
+}
+
+.backdrop-over-qv {
+    z-index: 1060 !important;
+}
+
+.user-panel.open {
+    display: block;
+}
+
+/* Quick View student */
 
 
+#stuQuickView .modal-dialog {
+    z-index: 1060;
+}
+
+#stuQuickView.modal {
+    z-index: 1055;
+}
+
+#stuLeaveConfirm.modal {
+    z-index: 1065;
+}
+
+.modal-backdrop {
+    z-index: 1045;
+}
+
+    .modal-backdrop.backdrop-top {
+        z-index: 1060;
+    }
+
+.btn-stu {
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
+    color: #fff;
+    border: none;
+    box-shadow: 0 6px 18px rgba(59,130,246,.25);
+}
+
+    .btn-stu:hover {
+        filter: brightness(1.05);
+        box-shadow: 0 8px 22px rgba(59,130,246,.32);
+    }
+
+    .btn-stu:active {
+        transform: translateY(1px);
+    }
+
+.btn-mat {
+    background: linear-gradient(135deg, #34d399 0%, #10b981 50%, #059669 100%);
+    color: #fff;
+    border: none;
+    box-shadow: 0 6px 18px rgba(16,185,129,.25);
+}
+
+    .btn-mat:hover {
+        filter: brightness(1.05);
+        box-shadow: 0 8px 22px rgba(16,185,129,.32);
+    }
+
+    .btn-mat:active {
+        transform: translateY(1px);
+    }
