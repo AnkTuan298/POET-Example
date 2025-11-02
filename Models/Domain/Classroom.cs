@@ -29,7 +29,6 @@ namespace POETWeb.Models.Domain
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-
         public ICollection<Enrollment>? Enrollments { get; set; }
     }
 }

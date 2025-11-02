@@ -2,6 +2,7 @@
 @using POETWeb.Models.Enums
 @{
     ViewData["Title"] = "Create Assignment";
+    var editId = ViewBag.EditId as int?;
 }
 
 <div class="container py-3">
@@ -15,11 +16,7 @@
         </div>
     </div>
 
-    @{
-        var editId = ViewBag.EditId as int?;
-    }
-
-    <form id="assignmentForm" asp-action="@(editId.HasValue ? "Edit" : "Create")" method="post">
+    <form asp-action="@(editId.HasValue ? "Edit" : "Create")" method="post" id="assForm">
         @Html.AntiForgeryToken()
         @if (editId.HasValue)
         {
@@ -31,8 +28,6 @@
         <input type="hidden" asp-for="Op" id="Op" />
         <input type="hidden" asp-for="QIndex" id="QIndex" />
         <input type="hidden" asp-for="ChoiceIndex" id="ChoiceIndex" />
-        <input type="hidden" id="MCQValue" value="@((int)QuestionType.Mcq)" />
-        <input type="hidden" id="EssayValue" value="@((int)QuestionType.Essay)" />
 
         <div asp-validation-summary="All" class="text-danger mb-2"></div>
 
@@ -81,21 +76,23 @@
 
         @for (int qi = 0; qi < Model.Questions.Count; qi++)
         {
-            <div class="ass-card mb-3">
+            var isMcq = Model.Questions[qi].Type == QuestionType.Mcq;
+            <div class="ass-card mb-3" id="q-@qi">
                 <div class="ass-card__head"></div>
                 <div class="ass-card__body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div class="fw-bold">Question @(qi + 1)</div>
 
                         <div class="d-flex align-items-center gap-2">
-                            <!-- Chọn loại cho TỪNG CÂU -->
                             <select asp-for="Questions[qi].Type" class="form-select form-select-sm q-type" data-qindex="@qi">
                                 <option value="@((int)QuestionType.Mcq)">MCQ</option>
                                 <option value="@((int)QuestionType.Essay)">Essay</option>
                             </select>
 
-                            <button type="button" class="btn btn-outline-danger btn-sm"
-                                    onclick="return postCmd('remove-q', @qi)">
+                            <button type="submit" class="btn btn-outline-danger btn-sm"
+                                    formnovalidate
+                                    data-anchor="#q-@qi"
+                                    onclick="return opRemoveQ(@qi)">
                                 Remove
                             </button>
                         </div>
@@ -109,53 +106,64 @@
 
                     <div class="mb-3 col-12 col-md-3">
                         <label class="form-label fw-semibold">Points</label>
-                        <input asp-for="Questions[qi].Points" class="form-control" type="number" min="0" step="0.5" />
+                        <!-- dùng step=0.5 để khớp validation "multiple of 0.5" -->
+                        <input asp-for="Questions[qi].Points" class="form-control" type="number" step="0.5" min="0" />
                     </div>
 
-                    <!-- MCQ ANSWERS -->
-                    <div class="mcq-block" data-for="@qi"
-                         style="display:@(Model.Questions[qi].Type == QuestionType.Mcq ? "block" : "none")">
-                        <div class="row g-2">
-                            @for (int ci = 0; ci < Model.Questions[qi].Choices.Count; ci++)
-                            {
-                                <div class="col-12 col-md-6">
-                                    <div class="input-group">
-                                        <div class="input-group-text">
-                                            <input type="radio" name="Questions[@qi].CorrectIndex" value="@ci"
-                                                   @(Model.Questions[qi].CorrectIndex == ci ? "checked" : "") />
+                    @if (isMcq)
+                    {
+                        <!-- MCQ -->
+                        <div class="mcq-block" data-for="@qi">
+                            <div class="row g-2">
+                                @for (int ci = 0; ci < Model.Questions[qi].Choices.Count; ci++)
+                                {
+                                    <div class="col-12 col-md-6">
+                                        <div class="input-group">
+                                            <div class="input-group-text">
+                                                <input type="radio" name="Questions[@qi].CorrectIndex" value="@ci"
+                                                       @(Model.Questions[qi].CorrectIndex == ci ? "checked" : "") />
+                                            </div>
+                                            <input asp-for="Questions[qi].Choices[ci].Text" class="form-control"
+                                                   placeholder="Choice @(ci + 1)" />
+                                            <button class="btn btn-outline-secondary" type="submit"
+                                                    formnovalidate
+                                                    data-anchor="#q-@qi"
+                                                    onclick="return opRemoveChoice(@qi, @ci)">
+                                                <i class="bi bi-x"></i>
+                                            </button>
                                         </div>
-                                        <input asp-for="Questions[qi].Choices[ci].Text" class="form-control"
-                                               placeholder="Choice @(ci + 1)" />
-                                        <button class="btn btn-outline-secondary" type="button"
-                                                onclick="return postCmd('remove-choice', @qi, @ci)">
-                                            <i class="bi bi-x"></i>
-                                        </button>
                                     </div>
-                                </div>
-                            }
+                                }
+                            </div>
+                            <div class="mt-2">
+                                <button type="submit" class="btn btn-soft"
+                                        formnovalidate
+                                        data-anchor="#q-@qi"
+                                        onclick="return opAddChoice(@qi)">
+                                    + Add choice
+                                </button>
+                                <small class="text-muted ms-2">Đánh dấu vòng tròn để chọn đáp án đúng.</small>
+                            </div>
                         </div>
-                        <div class="mt-2">
-                            <button type="button" class="btn btn-soft"
-                                    onclick="return postCmd('add-choice', @qi)">
-                                + Add choice
-                            </button>
-                            <small class="text-muted ms-2">Đánh dấu vòng tròn để chọn đáp án đúng.</small>
+                    }
+                    else
+                    {
+                        <!-- ESSAY -->
+                        <div class="essay-block alert alert-light border mb-0" data-for="@qi">
+                            Essay question. Teacher will grade manually.
                         </div>
-                    </div>
-
-                    <!-- ESSAY HINT -->
-                    <div class="essay-block alert alert-light border mb-0"
-                         data-for="@qi"
-                         style="display:@(Model.Questions[qi].Type == QuestionType.Essay ? "block" : "none")">
-                        Essay question. Teacher will grade manually.
-                    </div>
+                    }
                 </div>
             </div>
         }
 
+        <div id="ass-bottom"></div>
+
         <div class="d-flex justify-content-between">
-            <button type="button" class="btn btn-soft"
-                    onclick="return postCmd('add-q')">
+            <button type="submit" class="btn btn-soft"
+                    formnovalidate
+                    data-anchor="#ass-bottom"
+                    onclick="return opAddQ()">
                 + Add question
             </button>
 
@@ -170,38 +178,78 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        const MCQ_VAL = parseInt(document.getElementById('MCQValue').value, 10);
-        const ESSAY_VAL = parseInt(document.getElementById('EssayValue').value, 10);
-        const formEl = document.getElementById('assignmentForm');
+        /* ===== Toggle MCQ/Essay UI ===== */
+        function setMcqBlockEnabled(qIndex, enable) {
+            const block = document.querySelector('.mcq-block[data-for="' + qIndex + '"]');
+            const essay = document.querySelector('.essay-block[data-for="' + qIndex + '"]');
+            if (block) {
+                block.querySelectorAll('input,select,textarea,button').forEach(el => {
+                    if (el.type === 'submit') return; // giữ nút lệnh hoạt động
+                    el.disabled = !enable;
+                });
+                block.style.display = enable ? 'block' : 'none';
+            }
+            if (essay) essay.style.display = enable ? 'none' : 'block';
+        }
 
-        // Khi đổi dropdown, post về server để re-render đúng UI
-        document.querySelectorAll('.q-type').forEach(function(sel){
-            sel.addEventListener('change', function(){
-                var idx = parseInt(this.getAttribute('data-qindex'), 10);
-                if (parseInt(this.value, 10) === MCQ_VAL) {
-                    postCmd('to-mcq', idx);
-                } else {
-                    postCmd('to-essay', idx);
-                }
-            });
+        document.querySelectorAll('.q-type').forEach(function (sel) {
+            sel.addEventListener('change', function () {
+                var idx = this.getAttribute('data-qindex');
+                var isMcq = this.value === '1';
+                setMcqBlockEnabled(idx, isMcq);
+            }, { passive: true });
         });
 
-        function setOp(op, qIndex, choiceIndex){
-          document.getElementById('Op').value = op;
-          if (qIndex !== undefined) document.getElementById('QIndex').value = qIndex;
-          if (choiceIndex !== undefined) document.getElementById('ChoiceIndex').value = choiceIndex;
-        }
+        // init state after render
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.q-type').forEach(function (sel) {
+                var idx = sel.getAttribute('data-qindex');
+                var isMcq = sel.value === '1';
+                setMcqBlockEnabled(idx, isMcq);
+            });
+        }, { once: true });
 
-        // submit native, bỏ qua mọi handler validation
-        function nativeSubmit(form){
-          HTMLFormElement.prototype.submit.call(form);
-        }
+        /* ===== Postback scroll restore ===== */
+        (function () {
+            const KEY_POS = 'ass-create-scrollY';
+            const KEY_ANCHOR = 'ass-create-anchor';
 
-        function postCmd(op, qIndex, choiceIndex){
-          setOp(op, qIndex, choiceIndex);
-          if (formEl) formEl.setAttribute('novalidate','novalidate');
-          nativeSubmit(formEl);
-          return false;
+            // Lưu anchor hoặc scrollY trước khi submit
+            document.querySelectorAll('#assForm button[type="submit"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const a = btn.getAttribute('data-anchor') || '';
+                    if (a) {
+                        sessionStorage.setItem(KEY_ANCHOR, a);
+                    } else {
+                        sessionStorage.setItem(KEY_POS, String(window.scrollY || window.pageYOffset || 0));
+                    }
+                }, { passive: true });
+            });
+
+            // Khôi phục sau khi nạp lại
+            window.addEventListener('DOMContentLoaded', () => {
+                const a = sessionStorage.getItem(KEY_ANCHOR);
+                if (a) {
+                    const el = document.querySelector(a);
+                    if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+                    sessionStorage.removeItem(KEY_ANCHOR);
+                    return;
+                }
+                const y = parseInt(sessionStorage.getItem(KEY_POS) || '0', 10);
+                if (!isNaN(y) && y > 0) window.scrollTo(0, y);
+                sessionStorage.removeItem(KEY_POS);
+            }, { once: true });
+        })();
+
+        /* ===== Command helpers ===== */
+        function setOp(op, qIndex, choiceIndex) {
+            document.getElementById('Op').value = op;
+            if (qIndex !== undefined) document.getElementById('QIndex').value = qIndex;
+            if (choiceIndex !== undefined) document.getElementById('ChoiceIndex').value = choiceIndex;
         }
+        function opAddQ() { setOp('add-q'); return true; }
+        function opRemoveQ(i) { setOp('remove-q', i); return true; }
+        function opAddChoice(i) { setOp('add-choice', i); return true; }
+        function opRemoveChoice(i, c) { setOp('remove-choice', i, c); return true; }
     </script>
 }

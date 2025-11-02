@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using POETWeb.Models;
 using POETWeb.Models.Domain;
+using POETWeb.Models;
 
 namespace POETWeb.Data
 {
@@ -21,11 +21,11 @@ namespace POETWeb.Data
         public DbSet<AssignmentAttempt> AssignmentAttempts => Set<AssignmentAttempt>();
         public DbSet<AssignmentAnswer> AssignmentAnswers => Set<AssignmentAnswer>();
 
-
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
+            // ================== USER / CLASSROOM / ENROLLMENT ==================
             builder.Entity<ApplicationUser>(b =>
             {
                 b.Property(u => u.AccountCode).HasMaxLength(8);
@@ -40,10 +40,10 @@ namespace POETWeb.Data
                 b.HasIndex(c => c.ClassCode).IsUnique();
             });
 
-            // Enrollment: 1 user chỉ có 1 dòng trong 1 lớp
             builder.Entity<Enrollment>(b =>
             {
                 b.HasKey(e => e.Id);
+
                 b.HasOne(e => e.Classroom)
                  .WithMany(c => c.Enrollments)
                  .HasForeignKey(e => e.ClassId)
@@ -53,7 +53,7 @@ namespace POETWeb.Data
                 b.Property(e => e.RoleInClass).HasMaxLength(30);
             });
 
-            // ================== ASSIGNMENT BLOCK ==================
+            // ================== ASSIGNMENT CORE ==================
             builder.Entity<Assignment>(b =>
             {
                 b.Property(x => x.Title).HasMaxLength(160).IsRequired();
@@ -61,25 +61,24 @@ namespace POETWeb.Data
                 b.Property(x => x.DurationMinutes).HasDefaultValue(30);
                 b.Property(x => x.MaxAttempts).HasDefaultValue(1);
 
-                // Assignment thuộc về một Classroom, xóa lớp sẽ xóa tất cả assignment
                 b.HasOne(x => x.Class)
-                 .WithMany() // không cần nav property trên Classroom
+                 .WithMany()
                  .HasForeignKey(x => x.ClassId)
                  .OnDelete(DeleteBehavior.Cascade);
 
-                // Người tạo (giáo viên) — không cho cascade delete user
                 b.HasOne(x => x.CreatedBy)
                  .WithMany()
                  .HasForeignKey(x => x.CreatedById)
                  .OnDelete(DeleteBehavior.Restrict);
 
-                b.HasIndex(x => new { x.ClassId, x.Title }); // phụ: để tìm kiếm trong lớp
+                b.HasIndex(x => new { x.ClassId, x.Title });
             });
 
             builder.Entity<AssignmentQuestion>(b =>
             {
                 b.Property(x => x.Prompt).HasMaxLength(1000).IsRequired();
-                b.Property(x => x.Points).HasPrecision(6, 2);
+                b.Property(x => x.Points).HasPrecision(6, 2); // decimal(6,2)
+
                 b.HasOne(x => x.Assignment)
                  .WithMany(a => a.Questions)
                  .HasForeignKey(x => x.AssignmentId)
@@ -89,18 +88,25 @@ namespace POETWeb.Data
             builder.Entity<AssignmentChoice>(b =>
             {
                 b.Property(x => x.Text).HasMaxLength(400).IsRequired();
+
                 b.HasOne(x => x.Question)
                  .WithMany(q => q.Choices)
                  .HasForeignKey(x => x.QuestionId)
                  .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // ================== ATTEMPT / ANSWER ==================
             builder.Entity<AssignmentAttempt>(b =>
             {
-                b.Property(x => x.Score).HasPrecision(8, 2);
+                b.Property(x => x.DurationMinutes).HasDefaultValue(30);
+                b.Property(x => x.RequiresManualGrading).HasDefaultValue(false);
+
+                b.Property(x => x.MaxScore).HasPrecision(10, 2);   // decimal(10,2)
+                b.Property(x => x.AutoScore).HasPrecision(10, 2);  // decimal(10,2)
+                b.Property(x => x.FinalScore).HasPrecision(10, 2); // decimal(10,2)
 
                 b.HasOne(x => x.Assignment)
-                 .WithMany()
+                 .WithMany(a => a.Attempts)
                  .HasForeignKey(x => x.AssignmentId)
                  .OnDelete(DeleteBehavior.Cascade);
 
@@ -109,16 +115,13 @@ namespace POETWeb.Data
                  .HasForeignKey(x => x.UserId)
                  .OnDelete(DeleteBehavior.Restrict);
 
-                // mỗi user chỉ có 1 attemptNumber cho 1 assignment
-                b.HasIndex(x => new { x.AssignmentId, x.UserId, x.AttemptNumber })
-                 .IsUnique();
+                b.HasIndex(x => new { x.AssignmentId, x.UserId, x.AttemptNumber }).IsUnique();
             });
 
             builder.Entity<AssignmentAnswer>(b =>
             {
                 b.Property(x => x.TextAnswer).HasMaxLength(8000);
-                b.Property(x => x.AutoScore).HasPrecision(6, 2);
-                b.Property(x => x.ManualScore).HasPrecision(6, 2);
+                b.Property(x => x.PointsAwarded).HasPrecision(10, 2); // decimal(10,2)
 
                 b.HasOne(x => x.Attempt)
                  .WithMany(a => a.Answers)
@@ -128,17 +131,13 @@ namespace POETWeb.Data
                 b.HasOne(x => x.Question)
                  .WithMany()
                  .HasForeignKey(x => x.QuestionId)
-                 .OnDelete(DeleteBehavior.Restrict); // giữ câu hỏi khi xóa answer
+                 .OnDelete(DeleteBehavior.Restrict);
 
-                // cho MCQ: SelectedChoice (tùy chọn), không cascade
                 b.HasOne(x => x.SelectedChoice)
                  .WithMany()
                  .HasForeignKey(x => x.SelectedChoiceId)
                  .OnDelete(DeleteBehavior.Restrict);
             });
-            // ================== END ASSIGNMENT BLOCK ==================
-
         }
-
     }
 }

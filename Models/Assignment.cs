@@ -18,15 +18,12 @@ namespace POETWeb.Models
 
         public AssignmentType Type { get; set; }
 
-        // ràng buộc theo đề bài
-        [Range(1, 600)] public int DurationMinutes { get; set; } = 30; // thời gian làm bài
-        [Range(1, 20)] public int MaxAttempts { get; set; } = 1;   // số lần được thi
+        [Range(1, 600)] public int DurationMinutes { get; set; } = 30;
+        [Range(1, 20)] public int MaxAttempts { get; set; } = 1;
 
-        // thuộc lớp nào
         public int ClassId { get; set; }
         public Classroom Class { get; set; } = null!;
 
-        // thời điểm mở/đóng
         public DateTimeOffset? OpenAt { get; set; }
         public DateTimeOffset? CloseAt { get; set; }
 
@@ -35,6 +32,7 @@ namespace POETWeb.Models
         public ApplicationUser CreatedBy { get; set; } = null!;
 
         public List<AssignmentQuestion> Questions { get; set; } = new();
+        public List<AssignmentAttempt> Attempts { get; set; } = new();
     }
 
     public class AssignmentQuestion
@@ -44,16 +42,16 @@ namespace POETWeb.Models
         public Assignment Assignment { get; set; } = null!;
 
         public QuestionType Type { get; set; }  // Mcq hoặc Essay
+
         [Required, MaxLength(1000)]
         public string Prompt { get; set; } = "";
 
-        // điểm tối đa của câu
-        [Range(0, 100)] public double Points { get; set; } = 1.0;
+        // điểm tối đa của câu (decimal)
+        [Range(typeof(decimal), "0", "100")]
+        public decimal Points { get; set; } = 1m;
 
-        // thứ tự hiển thị
         public int Order { get; set; } = 0;
 
-        // cho trắc nghiệm: danh sách lựa chọn
         public List<AssignmentChoice> Choices { get; set; } = new();
     }
 
