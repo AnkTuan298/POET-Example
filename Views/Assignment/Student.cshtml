@@ -22,7 +22,6 @@
                 }
                 else
                 {
-
                     <text>Across your joined classes</text>
                 }
             </div>
@@ -59,19 +58,18 @@
 
                     <div class="col-12 col-md-6 col-lg-4">
                         <div class="ass-card h-100 card-hover card-click"
-                             role="button"
+                             role="button" tabindex="0" aria-label="Open assignment details"
                              data-id="@a.Id"
                              data-title="@a.Title"
                              data-type="@typeText"
                              data-typecls="@badgeCls"
                              data-class="@a.ClassName"
                              data-status="@a.Status"
-                             data-open="@(a.DueAt.HasValue ? "" : "")"
                              data-due="@(a.DueAt.HasValue? a.DueAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "No due date")"
-                             data-duration="@a.DurationMinutes"
+                             data-duration="@(a.DurationMinutes)"
                              data-max="@a.MaxAttempts"
                              data-desc="@a.Description"
-                             data-start-url="@Url.Action("Start", "Assignment", new { id = a.Id })"
+                             data-start-url="@Url.Action("Take", "Assignment", new { id = a.Id, index = 0 })"
                              data-history-url="@Url.Action("History", "Assignment", new { id = a.Id })">
                             <div class="ass-card__head"></div>
                             <div class="ass-card__body">
@@ -183,7 +181,6 @@
 </div>
 
 <style>
-    /* hover nổi nhẹ cho card */
     .card-hover {
         transition: transform .12s ease, box-shadow .12s ease;
     }
@@ -193,7 +190,6 @@
             box-shadow: 0 10px 24px rgba(0,0,0,.12);
         }
 
-    /* badge loại bài thi */
     .badge-type {
         display: inline-block;
         padding: .2rem .5rem;
@@ -214,7 +210,6 @@
         background: linear-gradient(90deg,#f59e0b,#ef4444);
     }
 
-    /* tiles đẹp mắt trong modal */
     .info-tile {
         background: #fafafa;
         border: 1px solid #eee;
@@ -256,28 +251,23 @@
 
 @section Scripts {
     <script>
-        // Khởi tạo modal (Bootstrap 5)
-        var assModal = document.getElementById('assModal');
-        var bsModal = null;
+        // mở modal khi click card (và hỗ trợ Enter/Space)
+        function openAssModalFromEl(el){
+            var title   = el.dataset.title || 'Assignment';
+            var type    = el.dataset.type || '—';
+            var typeCls = el.dataset.typecls || 'badge-type';
+            var cls     = el.dataset.class || '—';
+            var status  = el.dataset.status || '—';
+            var due     = el.dataset.due || '—';
+            var max     = el.dataset.max || '—';
+            var desc    = el.dataset.desc || '—';
+            var start   = el.dataset.startUrl || '#';
+            var hist    = el.dataset.historyUrl || '#';
+            var dur     = el.dataset.duration;
 
-        // Lắng nghe click trên card
-        document.querySelectorAll('.card-click').forEach(function(card){
-          card.addEventListener('click', function(){
-            // Lấy data từ card
-            var title   = this.dataset.title || 'Assignment';
-            var type    = this.dataset.type || '—';
-            var typeCls = this.dataset.typecls || 'badge-type';
-            var cls     = this.dataset.class || '—';
-            var status  = this.dataset.status || '—';
-            var due     = this.dataset.due || '—';
-            var max     = this.dataset.max || '—';
-            var desc    = this.dataset.desc || '—';
-            var start   = this.dataset.startUrl || '#';
-            var hist    = this.dataset.historyUrl || '#';
-
-            // Gán vào modal
             document.getElementById('assModalTitle').innerText = title;
             document.getElementById('assModalSubTitle').innerText = 'Preview assignment details';
+
             var typeBadge = document.getElementById('assModalTypeBadge');
             typeBadge.className = typeCls;
             typeBadge.innerText = type;
@@ -285,23 +275,21 @@
             document.getElementById('assModalClass').innerText = cls;
             document.getElementById('assModalStatus').innerText = status;
             document.getElementById('assModalDue').innerText = due;
-
-            // Nếu bạn có DurationMinutes trong VM Student item, map vào data-duration; nếu chưa thì ẩn:
-            var durEl = document.getElementById('assModalDuration');
-            if (this.dataset.duration) { durEl.innerText = this.dataset.duration + ' min'; }
-            else { durEl.innerText = '—'; }
-
+            document.getElementById('assModalDuration').innerText = dur ? (dur + ' min') : '—';
             document.getElementById('assModalMax').innerText = max || '—';
-            document.getElementById('assModalDesc').innerText = desc && desc.trim().length ? desc : '—';
+            document.getElementById('assModalDesc').innerText = (desc && desc.trim().length) ? desc : '—';
 
-            // Nút
             document.getElementById('assModalStartBtn').setAttribute('href', start);
             document.getElementById('assModalHistoryBtn').setAttribute('href', hist);
 
-            // Mở modal
-            if (!bsModal) bsModal = new bootstrap.Modal(assModal);
-            bsModal.show();
-          });
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('assModal')).show();
+        }
+
+        document.querySelectorAll('.card-click').forEach(function(card){
+            card.addEventListener('click', function(){ openAssModalFromEl(this); });
+            card.addEventListener('keydown', function(e){
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAssModalFromEl(this); }
+            });
         });
     </script>
 }

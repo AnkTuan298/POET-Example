@@ -1,0 +1,453 @@
+﻿@model POETWeb.Models.ViewModels.TakeAttemptVM
+@using POETWeb.Models.Enums
+@{
+    ViewData["Title"] = Model.Title;
+    var total = Model.Questions.Count;
+}
+
+<style>
+    /* Layout */
+    .take-wrap {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: 100dvh;
+    }
+
+        .take-wrap > section {
+            display: flex;
+            flex-direction: column;
+            min-height: 100dvh;
+        }
+
+    .qnav {
+        background: #f8fafc;
+        border-right: 1px solid #e5e7eb;
+        padding: 16px;
+        overflow: auto;
+    }
+
+        .qnav h6 {
+            font-weight: 700;
+            margin: 0 0 10px;
+            color: #0f172a
+        }
+
+    .qnav-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px
+    }
+
+    .qitem {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 8px 10px;
+        background: #fff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: transform .12s, box-shadow .12s, border-color .12s;
+    }
+
+        .qitem:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(0,0,0,.06)
+        }
+
+        .qitem.active {
+            border-color: #60a5fa;
+            box-shadow: 0 8px 20px rgba(37,99,235,.08)
+        }
+
+        .qitem .qtitle {
+            font-size: .92rem;
+            color: #0f172a;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .qitem .qdot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: #e5e7eb;
+            margin-left: 10px;
+            flex-shrink: 0
+        }
+
+        .qitem.answered .qdot {
+            background: #22c55e
+        }
+
+    /* Header */
+    .qmain-header {
+        padding: 18px 24px;
+        background: linear-gradient(90deg,#2563eb,#0ea5e9);
+        color: #fff
+    }
+
+        .qmain-header .title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 22px;
+            font-weight: 800;
+            margin: 0
+        }
+
+    .timer {
+        margin-left: auto;
+        background: rgba(255,255,255,.15);
+        padding: 6px 10px;
+        border-radius: 10px;
+        font-weight: 700
+    }
+
+    /* Progress bar dưới header */
+    .qprogress {
+        height: 6px;
+        background: rgba(255,255,255,.25);
+        margin: 6px 24px 0 24px;
+        border-radius: 999px;
+        overflow: hidden
+    }
+
+        .qprogress > .bar {
+            height: 100%;
+            width: 0%;
+            background: #93c5fd;
+            transition: width .15s ease
+        }
+
+    /* Nội dung câu hỏi */
+    .qcontent {
+        padding: 22px 28px;
+        flex: 1 1 auto;
+        padding-bottom: 90px !important;
+    }
+
+    .qtitle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px
+    }
+
+    .q-pts {
+        background: #dbeafe;
+        color: #1d4ed8;
+        border-radius: 10px;
+        padding: 2px 8px;
+        font-weight: 700;
+        white-space: nowrap
+    }
+
+    .opt {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 14px 16px;
+        background: #fff;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: border-color .12s, box-shadow .12s;
+    }
+
+        .opt:hover {
+            border-color: #a5b4fc;
+            box-shadow: 0 6px 16px rgba(99,102,241,.08)
+        }
+
+        .opt input {
+            transform: scale(1.15)
+        }
+
+    .qcontent > :last-child {
+        margin-bottom: 0 !important;
+    }
+
+    .essay-box {
+        width: 100%;
+        min-height: 220px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 12px 14px
+    }
+
+    /* Bottom bar bám đáy viewport */
+    .take-bar {
+        position: fixed;
+        left: 260px; /* bằng độ rộng sidebar */
+        right: 0;
+        bottom: 0;
+        z-index: 1030;
+        background: #f3f4f6;
+        color: #111827;
+        border-top: 1px solid #e5e7eb;
+        padding: 14px 20px;
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 10px;
+    }
+
+        .take-bar .left-slot {
+            justify-self: start
+        }
+
+        .take-bar .right-slot {
+            justify-self: end;
+            display: flex;
+            gap: 10px
+        }
+
+    .btn-soft {
+        background: #ffffff;
+        border: 1px solid #d1d5db;
+        color: #111827;
+        border-radius: 10px;
+        padding: 10px 16px
+    }
+
+        .btn-soft:disabled {
+            opacity: .35
+        }
+
+    .btn-next {
+        background: #2563eb;
+        border: 0;
+        color: #fff;
+        border-radius: 10px;
+        padding: 10px 16px
+    }
+
+    .btn-finish {
+        background: #64748b;
+        border: 0;
+        color: #fff;
+        border-radius: 10px;
+        padding: 10px 16px
+    }
+
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+
+    :where(.container).py-3 {
+        padding-bottom: 0 !important;
+    }
+
+    .take-wrap {
+        padding-bottom: 0 !important;
+    }
+
+        .take-wrap > section {
+            margin-bottom: 0 !important;
+        }
+
+    /* Responsive: khi sidebar collapse thì thanh phủ full chiều ngang */
+    @@media (max-width: 991px) {
+        .take-wrap
+
+    {
+        grid-template-columns: 1fr;
+    }
+
+    .take-bar {
+        left: 0;
+    }
+
+    }
+</style>
+
+@using System.Text.Json
+@{
+    var qTotal = Model.Questions.Count;
+
+    // UTC-safe times
+    var startUtc = Model.StartedAt.UtcDateTime;
+    var dueUtc = (Model.DueAt ?? Model.StartedAt.AddMinutes(Model.DurationMinutes)).UtcDateTime;
+
+    var startIso = startUtc.ToString("yyyy-MM-ddTHH:mm:ss.fff'Z'");
+    var dueIso = dueUtc.ToString("yyyy-MM-ddTHH:mm:ss.fff'Z'");
+
+    var pointsArr = Model.Questions.Select(q => (int)Math.Round(q.Points)).ToArray();
+}
+
+<div class="take-wrap" id="takeRoot" data-attempt="@Model.AttemptId">
+    <aside class="qnav">
+        <h6>Questions</h6>
+        <div class="small text-muted mb-2"><span id="answeredCount">@Model.AnsweredCount</span> of @qTotal answered</div>
+        <ul class="qnav-list" id="qList">
+            @for (var i = 0; i < qTotal; i++)
+            {
+                var q = Model.Questions[i];
+                var active = i == Model.CurrentIndex ? "active" : "";
+                var answered = q.IsAnswered ? "answered" : "";
+                <li class="qitem @active @answered" data-index="@i">
+                    @{
+                        var _raw = q.Prompt ?? "";
+                        var _short = _raw.Length <= 24 ? _raw : _raw.Substring(0, 24) + "…";
+                    }
+                    <div class="qtitle">Q@(i + 1) <span class="text-muted">· @_short</span></div>
+                    <span class="qdot" aria-hidden="true"></span>
+                </li>
+            }
+        </ul>
+    </aside>
+
+    <section>
+        <div class="qmain-header d-flex align-items-center gap-3">
+            <div class="title" id="qHeaderTitle">@Model.Title</div>
+            <div class="timer ms-auto" id="timer"></div>
+        </div>
+
+        <div class="qprogress"><div class="bar" id="qProgBar"></div></div>
+
+        <div class="qcontent">
+            @for (var i = 0; i < qTotal; i++)
+            {
+                var q = Model.Questions[i];
+                var hidden = i == Model.CurrentIndex ? "" : "style=\"display:none\"";
+                <div class="qpanel" data-index="@i" @Html.Raw(hidden)>
+                    <div class="qtitle-row mb-3">
+                        <div class="h5 fw-bold m-0" id="qTitle-@i">@q.Prompt</div>
+                        <span class="q-pts" id="qPts-@i">@((int)Math.Round(q.Points)) pts</span>
+                    </div>
+
+                    @if (q.Type == QuestionType.Mcq)
+                    {
+                        foreach (var c in q.Choices)
+                        {
+                            var cid = $"c{i}_{c.ChoiceId}";
+                            <label class="opt" for="@cid">
+                                <input type="radio"
+                                       id="@cid"
+                                       name="q-@q.QuestionId"
+                                       value="@c.ChoiceId"
+                                       @(q.SelectedChoiceId == c.ChoiceId ? "checked" : "")
+                                       data-qid="@q.QuestionId" data-kind="mcq" />
+                                <span>@c.Text</span>
+                            </label>
+                        }
+                    }
+                    else
+                    {
+                        <textarea class="essay-box"
+                          data-qid="@q.QuestionId"
+                          data-kind="essay"
+                          placeholder="Type your answer here...">@q.TextAnswer</textarea>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="take-bar">
+            <div class="left-slot">
+                <button id="btnPrev" class="btn-soft">Previous</button>
+            </div>
+            <div class="right-slot">
+                <button id="btnNext" class="btn-next">Next</button>
+                <form asp-action="Finish" asp-controller="Assignment" method="post" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="attemptId" value="@Model.AttemptId" />
+                    <button type="submit" class="btn-finish">Finish</button>
+                </form>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+    (function(){
+      const root      = document.getElementById('takeRoot');
+      const attemptId = Number(root.dataset.attempt);
+      const qPanels   = Array.from(document.querySelectorAll('.qpanel'));
+      const qItems    = Array.from(document.querySelectorAll('.qitem'));
+      const total     = @qTotal;
+      let index       = @Model.CurrentIndex;
+
+      // Timer
+      const startAt = new Date('@startIso');
+      const dueAt   = new Date('@dueIso');
+      const timerEl = document.getElementById('timer');
+      function tick(){
+        const now = new Date();
+        let s = Math.max(0, Math.floor((dueAt - now)/1000));
+        const m  = String(Math.floor(s/60)).padStart(2,'0');
+        const ss = String(s%60).padStart(2,'0');
+        timerEl.textContent = `${m}:${ss}`;
+        if(s<=0){ document.querySelector('.btn-finish')?.click(); }
+        else { requestAnimationFrame(tick); }
+      }
+      requestAnimationFrame(tick);
+
+      // Progress
+      const answeredCountEl = document.getElementById('answeredCount');
+      const progEl = document.getElementById('qProgBar');
+      function updateButtons(){
+        document.getElementById('btnPrev').disabled = index<=0;
+        document.getElementById('btnNext').disabled = index>=total-1;
+      }
+      function updateProgress(i){
+        const pct = total>1 ? Math.round((i/(total-1))*100) : 100;
+        progEl.style.width = `${pct}%`;
+      }
+      function show(i){
+        qPanels.forEach((p,ix)=> p.style.display = ix===i?'block':'none');
+        qItems.forEach((li,ix)=> li.classList.toggle('active', ix===i));
+        index=i; updateButtons(); updateProgress(i);
+      }
+      updateButtons();
+
+      // Nav
+      qItems.forEach(li=> li.addEventListener('click', ()=> show(Number(li.dataset.index)), {passive:true}));
+      document.getElementById('btnPrev').addEventListener('click', ()=>{ if(index>0) show(index-1); }, {passive:true});
+      document.getElementById('btnNext').addEventListener('click', ()=>{ if(index<total-1) show(index+1); }, {passive:true});
+
+      // Save answer (debounced)
+      let debounceId=null;
+      const save = (payload)=>
+        fetch('@Url.Action("SaveAnswer", "Assignment")', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(payload), credentials:'same-origin'
+        }).then(r=>{ if(!r.ok) throw new Error('save failed'); }).catch(console.error);
+
+      function recalcAnswered(){
+        const cnt = qItems.filter(x=>x.classList.contains('answered')).length;
+        answeredCountEl.textContent = cnt;
+      }
+
+      qPanels.forEach((panel, panelIndex)=>{
+        panel.querySelectorAll('input[type="radio"][data-kind="mcq"]').forEach(r=>{
+          r.addEventListener('change', ()=>{
+            const payload = { attemptId, questionId:Number(r.dataset.qid), selectedChoiceId:Number(r.value), textAnswer:null };
+            save(payload).then(()=>{ qItems[panelIndex]?.classList.add('answered'); recalcAnswered(); });
+          }, {passive:true});
+        });
+        panel.querySelectorAll('textarea[data-kind="essay"]').forEach(t=>{
+          t.addEventListener('input', ()=>{
+            const payload = { attemptId, questionId:Number(t.dataset.qid), selectedChoiceId:null, textAnswer:t.value };
+            clearTimeout(debounceId);
+            debounceId = setTimeout(()=> {
+              save(payload).then(()=>{
+                if(t.value.trim().length>0) qItems[panelIndex]?.classList.add('answered');
+                else qItems[panelIndex]?.classList.remove('answered');
+                recalcAnswered();
+              });
+            }, 400);
+          });
+        });
+      });
+
+      show(index);
+      window.onbeforeunload = null;
+    })();
+</script>

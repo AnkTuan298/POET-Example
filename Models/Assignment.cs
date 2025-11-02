@@ -46,7 +46,6 @@ namespace POETWeb.Models
         [Required, MaxLength(1000)]
         public string Prompt { get; set; } = "";
 
-        // điểm tối đa của câu (decimal)
         [Range(typeof(decimal), "0", "100")]
         public decimal Points { get; set; } = 1m;
 

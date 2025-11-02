@@ -24,8 +24,60 @@ namespace POETWeb.Controllers
             _userManager = userManager;
         }
 
-        // ================= LISTS (unchanged parts trimmed for brevity) =================
+        // ==== LISTS ====
 
+        // STUDENT: danh sách bài (để modal xem chi tiết, start...)
+        [Authorize(Roles = "Student")]
+        [HttpGet]
+        public async Task<IActionResult> Student(int? classId)
+        {
+            var me = await _userManager.GetUserAsync(User);
+
+            var myClassIds = _db.Enrollments
+                                .Where(e => e.UserId == me!.Id)
+                                .Select(e => e.ClassId);
+
+            var q = _db.Assignments
+                       .AsNoTracking()
+                       .Include(a => a.Class)
+                       .Where(a => myClassIds.Contains(a.ClassId));
+
+            if (classId.HasValue) q = q.Where(a => a.ClassId == classId.Value);
+
+            var now = DateTimeOffset.UtcNow;
+
+            var vm = new AssignmentStudentVM
+            {
+                ClassId = classId,
+                ClassName = classId == null
+                    ? null
+                    : await _db.Classrooms.AsNoTracking()
+                        .Where(c => c.Id == classId.Value)
+                        .Select(c => c.Name)
+                        .FirstOrDefaultAsync(),
+                Items = await q
+                    .OrderByDescending(a => a.CreatedAt)
+                    .Select(a => new AssignmentListItemVM
+                    {
+                        Id = a.Id,
+                        ClassId = a.ClassId,
+                        ClassName = a.Class.Name,
+                        Title = a.Title,
+                        DueAt = a.CloseAt,
+                        Status = a.OpenAt != null && now < a.OpenAt ? "Not Open"
+                                : a.CloseAt != null && now > a.CloseAt ? "Closed" : "Open",
+                        Type = a.Type,
+                        MaxAttempts = a.MaxAttempts,
+                        Description = a.Description,
+                        DurationMinutes = a.DurationMinutes
+                    })
+                    .ToListAsync()
+            };
+
+            return View(vm);
+        }
+
+        // TEACHER: danh sách
         [Authorize(Roles = "Teacher")]
         [HttpGet]
         public async Task<IActionResult> Teacher(int? classId)
@@ -59,7 +111,9 @@ namespace POETWeb.Controllers
                         DueAt = a.CloseAt,
                         Status = a.Type == AssignmentType.Mixed ? "Mixed"
                                : a.Type == AssignmentType.Mcq ? "MCQ" : "Essay",
-                        MaxAttempts = a.MaxAttempts
+                        MaxAttempts = a.MaxAttempts,
+                        Type = a.Type,
+                        Description = a.Description
                     })
                     .ToListAsync()
             };
@@ -67,7 +121,7 @@ namespace POETWeb.Controllers
             return View(vm);
         }
 
-        // ================= CREATE =================
+        //==== CREATE ====
 
         [Authorize(Roles = "Teacher")]
         [HttpGet]
@@ -100,7 +154,6 @@ namespace POETWeb.Controllers
             }
 
             ValidateAssignment(vm);
-
             if (!ModelState.IsValid) return View(vm);
 
             var me = await _userManager.GetUserAsync(User);
@@ -133,7 +186,7 @@ namespace POETWeb.Controllers
                     Assignment = assignment,
                     Type = q.Type,
                     Prompt = q.Prompt,
-                    Points = q.Points, // decimal -> entity decimal
+                    Points = q.Points, // decimal
                     Order = order++
                 };
 
@@ -163,7 +216,7 @@ namespace POETWeb.Controllers
             return RedirectToAction(nameof(Teacher), new { classId = assignment.ClassId });
         }
 
-        // ================= EDIT =================
+        //==== EDIT ====
 
         [Authorize(Roles = "Teacher")]
         [HttpGet]
@@ -193,7 +246,7 @@ namespace POETWeb.Controllers
                     {
                         Type = q.Type,
                         Prompt = q.Prompt,
-                        Points = q.Points, // decimal ok
+                        Points = q.Points,
                         Choices = q.Type == QuestionType.Mcq
                             ? q.Choices.OrderBy(c => c.Order)
                                        .Select(c => new CreateChoiceVM { Text = c.Text })
@@ -225,7 +278,6 @@ namespace POETWeb.Controllers
             }
 
             ValidateAssignment(vm);
-
             if (!ModelState.IsValid) { ViewBag.EditId = id; return View("Create", vm); }
 
             var me = await _userManager.GetUserAsync(User);
@@ -287,7 +339,8 @@ namespace POETWeb.Controllers
             return RedirectToAction(nameof(Teacher), new { classId = a.ClassId });
         }
 
-        // ================= DELETE =================
+        // ==== DELETE ====
+
         [Authorize(Roles = "Teacher")]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -306,7 +359,187 @@ namespace POETWeb.Controllers
             return RedirectToAction(nameof(Teacher), new { classId = classId ?? a.ClassId });
         }
 
-        // ================= Helpers =================
+        // ==== STUDENT: TAKE / SAVE / FINISH ====
+
+        // UI làm bài: start hoặc resume attempt đang dở
+        [Authorize(Roles = "Student")]
+        [HttpGet]
+        public async Task<IActionResult> Take(int id, int index = 0)
+        {
+            var me = await _userManager.GetUserAsync(User);
+
+            var a = await _db.Assignments
+                .Include(x => x.Class)
+                .Include(x => x.Questions).ThenInclude(q => q.Choices)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == id);
+            if (a == null) return NotFound();
+
+            // attempt đang làm
+            var attempt = await _db.AssignmentAttempts
+                .Include(t => t.Answers)
+                .Where(t => t.AssignmentId == id && t.UserId == me!.Id && t.Status == AttemptStatus.InProgress)
+                .OrderByDescending(t => t.StartedAt)
+                .FirstOrDefaultAsync();
+
+            if (attempt == null)
+            {
+                // số lượt đã làm
+                var taken = await _db.AssignmentAttempts
+                    .CountAsync(t => t.AssignmentId == id && t.UserId == me!.Id);
+
+                if (taken >= a.MaxAttempts) return Forbid();
+
+                attempt = new AssignmentAttempt
+                {
+                    AssignmentId = a.Id,
+                    UserId = me!.Id,
+                    AttemptNumber = taken + 1,
+                    DurationMinutes = a.DurationMinutes,
+                    StartedAt = DateTimeOffset.UtcNow,
+                    RequiresManualGrading = a.Questions.Any(q => q.Type == QuestionType.Essay),
+                    MaxScore = a.Questions.Sum(q => q.Points)
+                };
+                _db.AssignmentAttempts.Add(attempt);
+                await _db.SaveChangesAsync();
+
+                // seed câu trả lời rỗng
+                foreach (var q in a.Questions.OrderBy(q => q.Order))
+                {
+                    _db.AssignmentAnswers.Add(new AssignmentAnswer
+                    {
+                        AttemptId = attempt.Id,
+                        QuestionId = q.Id
+                    });
+                }
+                await _db.SaveChangesAsync();
+            }
+
+            var answers = await _db.AssignmentAnswers
+                .Where(x => x.AttemptId == attempt.Id)
+                .ToListAsync();
+
+            var vm = new TakeAttemptVM
+            {
+                AssignmentId = a.Id,
+                AttemptId = attempt.Id,
+                Title = a.Title,
+                ClassName = a.Class.Name,
+                DurationMinutes = attempt.DurationMinutes,
+                StartedAt = attempt.StartedAt,
+                DueAt = attempt.StartedAt.AddMinutes(attempt.DurationMinutes),
+                CurrentIndex = Math.Max(0, Math.Min(index, a.Questions.Count - 1)),
+                Questions = a.Questions
+                    .OrderBy(q => q.Order)
+                    .Select((q, i) =>
+                    {
+                        var ans = answers.First(x => x.QuestionId == q.Id);
+                        return new TakeQuestionVM
+                        {
+                            QuestionId = q.Id,
+                            Index = i,
+                            Prompt = q.Prompt,
+                            Points = (double)q.Points,
+                            Type = q.Type,
+                            SelectedChoiceId = ans.SelectedChoiceId,
+                            TextAnswer = ans.TextAnswer,
+                            Choices = q.Type == QuestionType.Mcq
+                                ? q.Choices.OrderBy(c => c.Order)
+                                    .Select(c => new TakeChoiceVM { ChoiceId = c.Id, Text = c.Text })
+                                    .ToList()
+                                : new(),
+                            IsAnswered = (q.Type == QuestionType.Mcq && ans.SelectedChoiceId != null)
+                                         || (q.Type == QuestionType.Essay && !string.IsNullOrWhiteSpace(ans.TextAnswer))
+                        };
+                    })
+                    .ToList()
+            };
+            vm.AnsweredCount = vm.Questions.Count(q => q.IsAnswered);
+
+            return View("Take", vm);
+        }
+
+        // DTO để nhận JSON khi lưu câu trả lời
+        public class SaveAnswerDTO
+        {
+            public int AttemptId { get; set; }
+            public int QuestionId { get; set; }
+            public int? SelectedChoiceId { get; set; }
+            public string? TextAnswer { get; set; }
+            public bool? Marked { get; set; }
+        }
+
+        // Lưu câu trả lời (AJAX)
+        [Authorize(Roles = "Student")]
+        [HttpPost]
+        public async Task<IActionResult> SaveAnswer([FromBody] SaveAnswerDTO dto)
+        {
+            var me = await _userManager.GetUserAsync(User);
+            var att = await _db.AssignmentAttempts
+                .Include(t => t.Assignment).ThenInclude(a => a.Questions)
+                .FirstOrDefaultAsync(t => t.Id == dto.AttemptId && t.UserId == me!.Id);
+            if (att == null || att.Status != AttemptStatus.InProgress) return BadRequest();
+
+            // quá hạn
+            if (DateTimeOffset.UtcNow > att.StartedAt.AddMinutes(att.DurationMinutes))
+                return BadRequest("Time is over");
+
+            var ans = await _db.AssignmentAnswers
+                .FirstOrDefaultAsync(x => x.AttemptId == att.Id && x.QuestionId == dto.QuestionId);
+            if (ans == null) return NotFound();
+
+            if (dto.SelectedChoiceId.HasValue)
+            {
+                ans.SelectedChoiceId = dto.SelectedChoiceId;
+                ans.TextAnswer = null;
+            }
+            if (dto.TextAnswer != null)
+            {
+                ans.TextAnswer = dto.TextAnswer;
+                ans.SelectedChoiceId = null;
+            }
+            await _db.SaveChangesAsync();
+            return Ok();
+        }
+
+        // Nộp bài
+        [Authorize(Roles = "Student")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Finish(int attemptId)
+        {
+            var me = await _userManager.GetUserAsync(User);
+            var att = await _db.AssignmentAttempts
+                .Include(t => t.Assignment).ThenInclude(a => a.Questions).ThenInclude(q => q.Choices)
+                .Include(t => t.Answers)
+                .FirstOrDefaultAsync(t => t.Id == attemptId && t.UserId == me!.Id);
+            if (att == null) return NotFound();
+
+            if (att.Status != AttemptStatus.InProgress)
+                return RedirectToAction(nameof(Student), new { classId = att.Assignment.ClassId });
+
+            // chấm tự động MCQ
+            decimal auto = 0m;
+            foreach (var q in att.Assignment.Questions)
+            {
+                var ans = att.Answers.FirstOrDefault(x => x.QuestionId == q.Id);
+                if (q.Type == QuestionType.Mcq)
+                {
+                    var correct = q.Choices.FirstOrDefault(c => c.IsCorrect)?.Id;
+                    if (ans?.SelectedChoiceId != null && correct == ans.SelectedChoiceId)
+                        auto += q.Points;
+                }
+            }
+            att.AutoScore = auto;
+            att.FinalScore = att.RequiresManualGrading ? null : auto;
+            att.SubmittedAt = DateTimeOffset.UtcNow;
+            att.Status = att.RequiresManualGrading ? AttemptStatus.Submitted : AttemptStatus.Graded;
+
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(Student), new { classId = att.Assignment.ClassId });
+        }
+
+        // =========================== HELPERS ===========================
 
         private bool ApplyDesignerOp(AssignmentCreateVM vm)
         {
@@ -353,7 +586,7 @@ namespace POETWeb.Controllers
             {
                 var q = vm.Questions[i];
 
-                // Điểm phải bội số 0.5
+                // bội số 0.5
                 if (q.Points % 0.5m != 0)
                     ModelState.AddModelError($"Questions[{i}].Points", "Points must be a multiple of 0.5.");
 
