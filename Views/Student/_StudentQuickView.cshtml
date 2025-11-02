@@ -30,6 +30,12 @@
                asp-controller="Materials" asp-action="Index" asp-route-classId="@Model.Id">
                 Materials
             </a>
+
+            <a class="btn btn-grad-amber me-2"
+               asp-controller="Assignment" asp-action="Student" asp-route-classId="@Model.Id">
+                <i class="bi bi-pencil-square"></i> Assignments
+            </a>
+
         </div>
 
         <button type="button" class="btn btn-grad-rose" data-leave-class="@Model.Id">

@@ -37,7 +37,7 @@ namespace POETWeb
             builder.Services.AddControllersWithViews();
             builder.Services.AddMemoryCache();
             builder.Services.AddDistributedMemoryCache();
-
+            builder.Services.AddScoped<POETWeb.Services.GradingService>();
 
             var app = builder.Build();
 

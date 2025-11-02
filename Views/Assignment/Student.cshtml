@@ -1,0 +1,307 @@
+﻿@model POETWeb.Models.ViewModels.AssignmentStudentVM
+@using POETWeb.Models.Enums
+@{
+    ViewData["Title"] = "Assignments";
+    var hasClass = Model?.ClassId != null;
+}
+
+<div class="container py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h3 class="mb-1">
+                Assignments
+                @if (hasClass)
+                {
+                    <text>• @Model!.ClassName</text>
+                }
+            </h3>
+            <div class="text-muted">
+                @if (hasClass)
+                {
+                    <text>Class ID: @Model!.ClassId</text>
+                }
+                else
+                {
+
+                    <text>Across your joined classes</text>
+                }
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-controller="Student" asp-action="Index" class="btn btn-soft">Back</a>
+        </div>
+    </div>
+
+    <div class="section-shell">
+        @if (Model?.Items == null || !Model.Items.Any())
+        {
+            <div class="alert alert-light border mb-0">
+                No assignments yet. Enjoy the peace while it lasts.
+            </div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var a in Model.Items)
+                {
+                    var typeText = a.Type switch
+                    {
+                        AssignmentType.Mcq => "MCQ",
+                        AssignmentType.Essay => "Essay",
+                        _ => "Mixed"
+                    };
+                    var badgeCls = a.Type switch
+                    {
+                        AssignmentType.Mcq => "badge-type badge-type-mcq",
+                        AssignmentType.Essay => "badge-type badge-type-essay",
+                        _ => "badge-type badge-type-mixed"
+                    };
+
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="ass-card h-100 card-hover card-click"
+                             role="button"
+                             data-id="@a.Id"
+                             data-title="@a.Title"
+                             data-type="@typeText"
+                             data-typecls="@badgeCls"
+                             data-class="@a.ClassName"
+                             data-status="@a.Status"
+                             data-open="@(a.DueAt.HasValue ? "" : "")"
+                             data-due="@(a.DueAt.HasValue? a.DueAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "No due date")"
+                             data-duration="@a.DurationMinutes"
+                             data-max="@a.MaxAttempts"
+                             data-desc="@a.Description"
+                             data-start-url="@Url.Action("Start", "Assignment", new { id = a.Id })"
+                             data-history-url="@Url.Action("History", "Assignment", new { id = a.Id })">
+                            <div class="ass-card__head"></div>
+                            <div class="ass-card__body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="ass-card__title d-flex align-items-center gap-2">
+                                        @a.Title
+                                        <span class="@badgeCls">@typeText</span>
+                                    </div>
+                                    <span class="badge badge-soft">@a.Status</span>
+                                </div>
+
+                                <div class="ass-card__meta mt-1">
+                                    <i class="bi bi-collection"></i>
+                                    <span class="ms-1">@a.ClassName</span>
+
+                                    @if (a.DueAt.HasValue)
+                                    {
+                                        <span class="ms-3">
+                                            <i class="bi bi-clock"></i>
+                                            Due: @a.DueAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="ms-3"><i class="bi bi-clock-history"></i> No due date</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@* MODAL: Assignment details *@
+<div class="modal fade" id="assModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header" style="background:linear-gradient(90deg,#6366f1,#22d3ee); color:#fff;">
+                <div>
+                    <h5 class="modal-title" id="assModalTitle">Assignment</h5>
+                    <div class="small opacity-90" id="assModalSubTitle"></div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="assModalTypeBadge" class="badge-type">Type</span>
+                            <span class="badge badge-soft" id="assModalStatus">Status</span>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <div class="info-tile">
+                            <div class="info-label"><i class="bi bi-collection"></i> Class</div>
+                            <div class="info-value" id="assModalClass">—</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <div class="info-tile">
+                            <div class="info-label"><i class="bi bi-clock"></i> Due</div>
+                            <div class="info-value" id="assModalDue">—</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <div class="info-tile">
+                            <div class="info-label"><i class="bi bi-hourglass-split"></i> Duration</div>
+                            <div class="info-value" id="assModalDuration">—</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <div class="info-tile">
+                            <div class="info-label"><i class="bi bi-arrow-repeat"></i> Max attempts</div>
+                            <div class="info-value" id="assModalMax">—</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="info-tile">
+                            <div class="info-label"><i class="bi bi-card-text"></i> Description</div>
+                            <div class="info-value" id="assModalDesc" style="white-space:pre-wrap;">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer d-flex justify-content-between">
+                <div class="text-muted small" id="assModalHint">Review details before you start.</div>
+                <div class="d-flex gap-2">
+                    <a id="assModalHistoryBtn" href="#" class="btn btn-outline-secondary">
+                        <i class="bi bi-journal-text"></i> Test history
+                    </a>
+                    <a id="assModalStartBtn" href="#" class="btn btn-grad-sky">
+                        <i class="bi bi-play-circle"></i> Start
+                    </a>
+                    <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* hover nổi nhẹ cho card */
+    .card-hover {
+        transition: transform .12s ease, box-shadow .12s ease;
+    }
+
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 24px rgba(0,0,0,.12);
+        }
+
+    /* badge loại bài thi */
+    .badge-type {
+        display: inline-block;
+        padding: .2rem .5rem;
+        font-size: .75rem;
+        border-radius: .5rem;
+        color: #fff;
+    }
+
+    .badge-type-mcq {
+        background: linear-gradient(90deg,#5b8cff,#7aa6ff);
+    }
+
+    .badge-type-essay {
+        background: linear-gradient(90deg,#8b5cf6,#a78bfa);
+    }
+
+    .badge-type-mixed {
+        background: linear-gradient(90deg,#f59e0b,#ef4444);
+    }
+
+    /* tiles đẹp mắt trong modal */
+    .info-tile {
+        background: #fafafa;
+        border: 1px solid #eee;
+        border-radius: .75rem;
+        padding: .75rem 1rem;
+    }
+
+    .info-label {
+        font-size: .8rem;
+        color: #6b7280;
+    }
+
+    .info-value {
+        font-weight: 600;
+        margin-top: .15rem;
+    }
+
+    .btn-grad-sky {
+        background: linear-gradient(90deg,#38bdf8,#22d3ee);
+        color: #fff;
+        border: none;
+    }
+
+        .btn-grad-sky:hover {
+            filter: brightness(.95);
+            color: #fff;
+        }
+
+    .btn-soft {
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+    }
+
+    .badge-soft {
+        background: #eef2ff;
+        color: #4f46e5;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        // Khởi tạo modal (Bootstrap 5)
+        var assModal = document.getElementById('assModal');
+        var bsModal = null;
+
+        // Lắng nghe click trên card
+        document.querySelectorAll('.card-click').forEach(function(card){
+          card.addEventListener('click', function(){
+            // Lấy data từ card
+            var title   = this.dataset.title || 'Assignment';
+            var type    = this.dataset.type || '—';
+            var typeCls = this.dataset.typecls || 'badge-type';
+            var cls     = this.dataset.class || '—';
+            var status  = this.dataset.status || '—';
+            var due     = this.dataset.due || '—';
+            var max     = this.dataset.max || '—';
+            var desc    = this.dataset.desc || '—';
+            var start   = this.dataset.startUrl || '#';
+            var hist    = this.dataset.historyUrl || '#';
+
+            // Gán vào modal
+            document.getElementById('assModalTitle').innerText = title;
+            document.getElementById('assModalSubTitle').innerText = 'Preview assignment details';
+            var typeBadge = document.getElementById('assModalTypeBadge');
+            typeBadge.className = typeCls;
+            typeBadge.innerText = type;
+
+            document.getElementById('assModalClass').innerText = cls;
+            document.getElementById('assModalStatus').innerText = status;
+            document.getElementById('assModalDue').innerText = due;
+
+            // Nếu bạn có DurationMinutes trong VM Student item, map vào data-duration; nếu chưa thì ẩn:
+            var durEl = document.getElementById('assModalDuration');
+            if (this.dataset.duration) { durEl.innerText = this.dataset.duration + ' min'; }
+            else { durEl.innerText = '—'; }
+
+            document.getElementById('assModalMax').innerText = max || '—';
+            document.getElementById('assModalDesc').innerText = desc && desc.trim().length ? desc : '—';
+
+            // Nút
+            document.getElementById('assModalStartBtn').setAttribute('href', start);
+            document.getElementById('assModalHistoryBtn').setAttribute('href', hist);
+
+            // Mở modal
+            if (!bsModal) bsModal = new bootstrap.Modal(assModal);
+            bsModal.show();
+          });
+        });
+    </script>
+}

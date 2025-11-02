@@ -1,0 +1,207 @@
+﻿@model POETWeb.Models.ViewModels.AssignmentCreateVM
+@using POETWeb.Models.Enums
+@{
+    ViewData["Title"] = "Create Assignment";
+}
+
+<div class="container py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h3 class="mb-1">Create Assignment</h3>
+            <div class="text-muted">Class ID: @Model.ClassId</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Teacher" asp-route-classId="@Model.ClassId" class="btn btn-soft">Back</a>
+        </div>
+    </div>
+
+    @{
+        var editId = ViewBag.EditId as int?;
+    }
+
+    <form id="assignmentForm" asp-action="@(editId.HasValue ? "Edit" : "Create")" method="post">
+        @Html.AntiForgeryToken()
+        @if (editId.HasValue)
+        {
+            <input type="hidden" name="id" value="@editId.Value" />
+        }
+
+        <input type="hidden" asp-for="ClassId" />
+        <input type="hidden" asp-for="Type" />
+        <input type="hidden" asp-for="Op" id="Op" />
+        <input type="hidden" asp-for="QIndex" id="QIndex" />
+        <input type="hidden" asp-for="ChoiceIndex" id="ChoiceIndex" />
+        <input type="hidden" id="MCQValue" value="@((int)QuestionType.Mcq)" />
+        <input type="hidden" id="EssayValue" value="@((int)QuestionType.Essay)" />
+
+        <div asp-validation-summary="All" class="text-danger mb-2"></div>
+
+        <div class="row g-3">
+            <div class="col-12 col-md-8">
+                <label class="form-label fw-semibold">Title</label>
+                <input asp-for="Title" class="form-control" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label class="form-label fw-semibold">Type (overall)</label>
+                <input class="form-control" value="Auto (MCQ / Essay / Mixed)" disabled />
+                <small class="text-muted">Loại tổng thể sẽ tự quyết dựa trên từng câu.</small>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label fw-semibold">Description</label>
+                <textarea asp-for="Description" rows="2" class="form-control"></textarea>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <label class="form-label fw-semibold">Duration (minutes)</label>
+                <input asp-for="DurationMinutes" class="form-control" type="number" min="1" max="600" />
+            </div>
+
+            <div class="col-6 col-md-3">
+                <label class="form-label fw-semibold">Max Attempts</label>
+                <input asp-for="MaxAttempts" class="form-control" type="number" min="1" max="20" />
+            </div>
+
+            <div class="col-6 col-md-3">
+                <label class="form-label fw-semibold">Open at</label>
+                <input asp-for="OpenAt" class="form-control" type="datetime-local"
+                       value="@(Model.OpenAt.HasValue? Model.OpenAt.Value.ToLocalTime().ToString("yyyy-MM-ddTHH:mm") : null)" />
+            </div>
+
+            <div class="col-6 col-md-3">
+                <label class="form-label fw-semibold">Due date</label>
+                <input asp-for="CloseAt" class="form-control" type="datetime-local"
+                       value="@(Model.CloseAt.HasValue? Model.CloseAt.Value.ToLocalTime().ToString("yyyy-MM-ddTHH:mm") : null)" />
+            </div>
+        </div>
+
+        <hr class="my-3" />
+
+        @for (int qi = 0; qi < Model.Questions.Count; qi++)
+        {
+            <div class="ass-card mb-3">
+                <div class="ass-card__head"></div>
+                <div class="ass-card__body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="fw-bold">Question @(qi + 1)</div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <!-- Chọn loại cho TỪNG CÂU -->
+                            <select asp-for="Questions[qi].Type" class="form-select form-select-sm q-type" data-qindex="@qi">
+                                <option value="@((int)QuestionType.Mcq)">MCQ</option>
+                                <option value="@((int)QuestionType.Essay)">Essay</option>
+                            </select>
+
+                            <button type="button" class="btn btn-outline-danger btn-sm"
+                                    onclick="return postCmd('remove-q', @qi)">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Prompt</label>
+                        <textarea asp-for="Questions[qi].Prompt" rows="2" class="form-control"></textarea>
+                        <span asp-validation-for="Questions[qi].Prompt" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3 col-12 col-md-3">
+                        <label class="form-label fw-semibold">Points</label>
+                        <input asp-for="Questions[qi].Points" class="form-control" type="number" min="0" step="0.5" />
+                    </div>
+
+                    <!-- MCQ ANSWERS -->
+                    <div class="mcq-block" data-for="@qi"
+                         style="display:@(Model.Questions[qi].Type == QuestionType.Mcq ? "block" : "none")">
+                        <div class="row g-2">
+                            @for (int ci = 0; ci < Model.Questions[qi].Choices.Count; ci++)
+                            {
+                                <div class="col-12 col-md-6">
+                                    <div class="input-group">
+                                        <div class="input-group-text">
+                                            <input type="radio" name="Questions[@qi].CorrectIndex" value="@ci"
+                                                   @(Model.Questions[qi].CorrectIndex == ci ? "checked" : "") />
+                                        </div>
+                                        <input asp-for="Questions[qi].Choices[ci].Text" class="form-control"
+                                               placeholder="Choice @(ci + 1)" />
+                                        <button class="btn btn-outline-secondary" type="button"
+                                                onclick="return postCmd('remove-choice', @qi, @ci)">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-soft"
+                                    onclick="return postCmd('add-choice', @qi)">
+                                + Add choice
+                            </button>
+                            <small class="text-muted ms-2">Đánh dấu vòng tròn để chọn đáp án đúng.</small>
+                        </div>
+                    </div>
+
+                    <!-- ESSAY HINT -->
+                    <div class="essay-block alert alert-light border mb-0"
+                         data-for="@qi"
+                         style="display:@(Model.Questions[qi].Type == QuestionType.Essay ? "block" : "none")">
+                        Essay question. Teacher will grade manually.
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="d-flex justify-content-between">
+            <button type="button" class="btn btn-soft"
+                    onclick="return postCmd('add-q')">
+                + Add question
+            </button>
+
+            <button type="submit" class="btn btn-grad-amber"
+                    onclick="document.getElementById('Op').value=''">
+                Save Assignment
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        const MCQ_VAL = parseInt(document.getElementById('MCQValue').value, 10);
+        const ESSAY_VAL = parseInt(document.getElementById('EssayValue').value, 10);
+        const formEl = document.getElementById('assignmentForm');
+
+        // Khi đổi dropdown, post về server để re-render đúng UI
+        document.querySelectorAll('.q-type').forEach(function(sel){
+            sel.addEventListener('change', function(){
+                var idx = parseInt(this.getAttribute('data-qindex'), 10);
+                if (parseInt(this.value, 10) === MCQ_VAL) {
+                    postCmd('to-mcq', idx);
+                } else {
+                    postCmd('to-essay', idx);
+                }
+            });
+        });
+
+        function setOp(op, qIndex, choiceIndex){
+          document.getElementById('Op').value = op;
+          if (qIndex !== undefined) document.getElementById('QIndex').value = qIndex;
+          if (choiceIndex !== undefined) document.getElementById('ChoiceIndex').value = choiceIndex;
+        }
+
+        // submit native, bỏ qua mọi handler validation
+        function nativeSubmit(form){
+          HTMLFormElement.prototype.submit.call(form);
+        }
+
+        function postCmd(op, qIndex, choiceIndex){
+          setOp(op, qIndex, choiceIndex);
+          if (formEl) formEl.setAttribute('novalidate','novalidate');
+          nativeSubmit(formEl);
+          return false;
+        }
+    </script>
+}

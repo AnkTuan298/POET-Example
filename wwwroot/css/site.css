@@ -1549,3 +1549,77 @@ section h2 {
     .btn-mat:active {
         transform: translateY(1px);
     }
+
+/* ---- Buttons ---- */
+.btn-grad-amber {
+    background-image: linear-gradient(90deg, #f7b733, #fc4a1a);
+    color: #fff !important;
+    border: 0;
+    box-shadow: 0 6px 14px rgba(252, 74, 26, 0.25);
+    transition: transform .08s ease, filter .2s ease, box-shadow .2s ease;
+}
+
+    .btn-grad-amber:hover {
+        filter: brightness(1.03);
+        transform: translateY(-1px);
+    }
+
+    .btn-grad-amber:active {
+        transform: translateY(0);
+    }
+
+.btn-grad-sky {
+    background-image: linear-gradient(90deg, #60a5fa, #34d399);
+    color: #fff !important;
+    border: 0;
+    box-shadow: 0 6px 14px rgba(52, 211, 153, .25);
+}
+
+.btn-soft {
+    background: #f8fafc;
+    border: 1px solid #eef2f7;
+    color: #111827;
+}
+
+/* ---- Assignment Cards ---- */
+.ass-card {
+    border: 1px solid #eef2f7;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(16, 24, 40, 0.06);
+    overflow: hidden;
+}
+
+.ass-card__head {
+    height: 8px;
+    background-image: linear-gradient(90deg, #a78bfa, #60a5fa);
+}
+
+.ass-card__body {
+    padding: 16px 18px;
+}
+
+.ass-card__title {
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.ass-card__meta {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.badge-soft {
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+}
+
+/* grid spacing like Materials */
+.section-shell {
+    background: #ffffff;
+    border: 1px solid #eef2f7;
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 8px 20px rgba(2, 6, 23, .05);
+}

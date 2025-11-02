@@ -21,6 +21,13 @@
             {
                 <a class="btn btn-grad-blue me-2" asp-action="Roster" asp-route-id="@Model.Id">Student List</a>
                 <a class="btn btn-grad-green me-2" asp-controller="Materials" asp-action="Index" asp-route-classId="@Model.Id">Materials</a>
+                <a class="btn btn-grad-amber"
+                   asp-controller="Assignment"
+                   asp-action="Teacher"
+                   asp-route-classId="@Model.Id">
+                    <i class="bi bi-pencil-square"></i> Assignments
+                </a>
+
 
                 <button type="button"
                         class="btn btn-grad-rose js-delete-class"

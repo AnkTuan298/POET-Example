@@ -1,0 +1,131 @@
+﻿@model POETWeb.Models.ViewModels.AssignmentTeacherVM
+@{
+    ViewData["Title"] = "Assignment Management";
+    var hasClass = Model?.ClassId != null;
+}
+
+<div class="container py-3">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h3 class="mb-1">
+                Assignments
+                @if (hasClass)
+                {
+                    <text> • @Model?.ClassName</text>
+                }
+            </h3>
+            <div class="text-muted">
+                @if (hasClass)
+                {
+                    <text>Class ID: @Model!.ClassId</text>
+                }
+                else
+                {
+
+                    <text>Across your classes</text>
+                }
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            @if (hasClass)
+            {
+                <a asp-controller="Assignment" asp-action="Create"
+                   asp-route-classId="@Model!.ClassId"
+                   class="btn btn-grad-amber">
+                    + Create assignment
+                </a>
+            }
+            else
+            {
+                <a asp-controller="Classrooms" asp-action="Index"
+                   class="btn btn-grad-amber">
+                    Pick a class to create
+                </a>
+            }
+            <a asp-controller="Teacher" asp-action="Index" class="btn btn-soft">Back</a>
+        </div>
+    </div>
+
+    <div class="section-shell">
+        @if (Model?.Items == null || !Model.Items.Any())
+        {
+            <div class="alert alert-light border mb-0">
+                No assignments yet. Time to make some homework magic.
+            </div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var a in Model.Items)
+                {
+                    <div class="col-12">
+                        <div class="ass-card">
+                            <div class="ass-card__head"></div>
+                            <div class="ass-card__body">
+                                <div class="d-flex justify-content-between flex-wrap gap-2">
+                                    <div>
+                                        <div class="ass-card__title">@a.Title</div>
+
+                                        @if (!string.IsNullOrWhiteSpace(a.Description))
+                                        {
+                                            <div class="text-muted small mt-1"
+                                                 style="max-width: 56rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                @a.Description
+                                            </div>
+                                        }
+
+                                        <div class="ass-card__meta text-muted small">
+                                            <i class="bi bi-collection"></i>
+                                            <span class="ms-1">@a.ClassName</span>
+                                            @if (a.DueAt.HasValue)
+                                            {
+                                                <span class="ms-3">
+                                                    <i class="bi bi-calendar3"></i>
+                                                    Due: @a.DueAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="ms-3"><i class="bi bi-clock-history"></i> No due date</span>
+                                            }
+
+                                            <span class="ms-3">
+                                                <i class="bi bi-arrow-repeat"></i>
+                                                Attempts: @a.MaxAttempts
+                                            </span>
+
+                                            <span class="badge bg-light text-dark ms-3">@a.Status</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2">
+                                        <a asp-controller="Assignment" asp-action="Edit"
+                                           asp-route-id="@a.Id"
+                                           asp-route-classId="@Model?.ClassId"
+                                           class="btn btn-outline-primary btn-sm">Edit</a>
+
+                                        <a asp-controller="Assignment" asp-action="Submissions"
+                                           asp-route-id="@a.Id"
+                                           class="btn btn-outline-secondary btn-sm">Submissions</a>
+
+                                        <form asp-controller="Assignment" asp-action="Delete"
+                                              asp-route-id="@a.Id"
+                                              asp-route-classId="@Model?.ClassId"
+                                              method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                    onclick="return confirm('Delete this assignment?');">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
