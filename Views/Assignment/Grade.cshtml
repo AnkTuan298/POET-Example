@@ -1,0 +1,327 @@
+﻿@model POETWeb.Models.ViewModels.GradeAttemptVM
+@using System.Globalization
+@{
+    ViewData["Title"] = "Grade • " + Model.AssignmentTitle;
+    string F(decimal v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+    string T(DateTimeOffset t) => t.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+    string Tn(DateTimeOffset? t) => t.HasValue ? t.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "—";
+}
+
+<div class="container-fluid px-0">
+
+    <!-- HERO full width -->
+    <div class="grade-hero mb-3">
+        <div class="container d-flex align-items-center justify-content-between grade-hero__inner">
+            <div>
+                <div class="small opacity-75">Grade</div>
+                <h4 class="mb-0">@Model.AssignmentTitle</h4>
+                <div class="small mt-1 opacity-90">
+                    @Model.StudentName (@Model.StudentEmail) • Attempt #@Model.AttemptNumber
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a asp-action="Submissions" asp-route-id="@Model.AssignmentId" class="btn btn-light btn-sm">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <div class="row g-3">
+            <!-- Summary -->
+            <div class="col-12 col-lg-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="text-muted">Status</div>
+                            <span class="badge badge-soft-@Model.Status.ToLowerInvariant() fs-6 px-2 py-1">@Model.Status</span>
+                        </div>
+
+                        <div class="info-line"><span>Started</span><strong>@T(Model.StartedAt)</strong></div>
+                        <div class="info-line"><span>Submitted</span><strong>@Tn(Model.SubmittedAt)</strong></div>
+                        <hr>
+
+                        <div class="score-row mb-2">
+                            <div class="score-chip mcq">@F(Model.McqScore)</div>
+                            <div class="score-denom">/ @F(Model.McqMax) MCQ</div>
+                        </div>
+
+                        <div class="score-row mb-2">
+                            <div class="score-chip essay" id="essaySumChip">0</div>
+                            <div class="score-denom">/ @F(Model.EssayMax) Essay</div>
+                        </div>
+
+                        <div class="progress progress-thin mb-2">
+                            <div class="progress-bar bg-essay" id="essayProgress" style="width:0%"></div>
+                        </div>
+
+                        <div class="score-row">
+                            <div class="score-chip final" id="finalChip">
+                                @(Model.CurrentFinalScore.HasValue? F(Model.CurrentFinalScore.Value) : "—")
+                            </div>
+                            <div class="score-denom">/ @F(Model.FinalMax) Final</div>
+                        </div>
+
+                        <div class="progress progress-thin">
+                            <div class="progress-bar bg-final" id="finalProgress" style="width:0%"></div>
+                        </div>
+
+                        <div class="small text-muted mt-2">
+                            Final = MCQ + Essay (clamped to max). Live preview updates as you type.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grading form -->
+            <div class="col-12 col-lg-8">
+                <form asp-action="Grade" method="post" id="gradeForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="AttemptId" value="@Model.AttemptId" />
+                    <input type="hidden" name="AssignmentId" value="@Model.AssignmentId" />
+                    <input type="hidden" name="AttemptNumber" value="@Model.AttemptNumber" />
+                    <input type="hidden" name="StudentId" value="@Model.StudentId" />
+
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-light fw-semibold">Essay questions</div>
+                        <div class="card-body">
+                            @if (Model.Essays == null || !Model.Essays.Any())
+                            {
+                                <div class="text-muted">No essay questions.</div>
+                            }
+                            else
+                            {
+                                for (var i = 0; i < Model.Essays.Count; i++)
+                                {
+                                    var e = Model.Essays[i];
+                                    <input type="hidden" name="Essays[@i].QuestionId" value="@e.QuestionId" />
+                                    <div class="essay-block">
+                                        <div class="d-flex align-items-start justify-content-between">
+                                            <div class="fw-semibold">Q@(i + 1)</div>
+                                            <div class="text-muted small">Max @F(e.MaxPoints)</div>
+                                        </div>
+                                        <div class="essay-prompt mt-1">@e.Prompt</div>
+
+                                        <div class="mt-2">
+                                            <div class="text-muted small mb-1">Student answer</div>
+                                            <div class="essay-answer">@e.StudentAnswer</div>
+                                        </div>
+
+                                        <div class="row g-2 mt-2">
+                                            <div class="col-12 col-sm-4">
+                                                <label class="form-label">Score</label>
+                                                <input type="number"
+                                                       step="0.5" min="0" max="@e.MaxPoints"
+                                                       name="Essays[@i].Score"
+                                                       class="form-control essay-score"
+                                                       data-max="@e.MaxPoints.ToString("0.##", CultureInfo.InvariantCulture)"
+                                                       value="@(e.Score?.ToString("0.##", CultureInfo.InvariantCulture) ?? "")" />
+                                            </div>
+                                            <div class="col-12 col-sm-8">
+                                                <label class="form-label">Comment</label>
+                                                <textarea name="Essays[@i].Comment" class="form-control" rows="2"
+                                                  placeholder="Optional feedback for the student">@e.Comment</textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+
+                    <div class="card mt-3 shadow-sm border-0">
+                        <div class="card-body">
+                            <label class="form-label mb-1">Overall comment</label>
+                            <textarea name="TeacherComment" class="form-control" rows="2"
+                                      placeholder="General feedback for this attempt">@Model.TeacherComment</textarea>
+
+                            <div class="d-flex justify-content-end gap-2 mt-3">
+                                <a asp-action="Submissions" asp-route-id="@Model.AssignmentId" class="btn btn-soft">Cancel</a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check2-circle"></i> Save grade
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div><!-- /form col -->
+        </div>
+    </div>
+</div>
+
+<style>
+    /* hero full-bleed */
+    .grade-hero {
+        background: linear-gradient(90deg,#6366f1,#22d3ee);
+        color: #fff;
+        border-radius: 0;
+        padding: .8rem 0;
+    }
+
+    .grade-hero__inner {
+        min-height: 72px;
+    }
+
+    /* soft badges by status */
+    .badge-soft-graded {
+        background: #e8fff3;
+        color: #16a34a;
+    }
+
+    .badge-soft-submitted {
+        background: #eef2ff;
+        color: #4f46e5;
+    }
+
+    .badge-soft-inprogress {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .badge-soft-late {
+        background: #fff7ed;
+        color: #d97706;
+    }
+
+    /* summary */
+    .info-line {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: .25rem;
+    }
+
+        .info-line span {
+            color: #6b7280;
+        }
+
+    .score-row {
+        display: flex;
+        align-items: baseline;
+        gap: .5rem;
+    }
+
+    .score-chip {
+        font-weight: 700;
+        border-radius: .4rem;
+        padding: .1rem .45rem;
+        min-width: 2.25rem;
+        text-align: center;
+    }
+
+        .score-chip.mcq {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
+        .score-chip.essay {
+            background: #f5ecff;
+            color: #6d28d9;
+        }
+
+        .score-chip.final {
+            background: #e9ffe9;
+            color: #0f766e;
+        }
+
+    .score-denom {
+        color: #6b7280;
+    }
+
+    .progress-thin {
+        height: 6px;
+        background: #f3f4f6;
+    }
+
+    .bg-essay {
+        background: linear-gradient(90deg,#8b5cf6,#a78bfa);
+    }
+
+    .bg-final {
+        background: linear-gradient(90deg,#34d399,#10b981);
+    }
+
+    /* essay blocks */
+    .essay-block {
+        border: 1px solid #eef0f4;
+        border-radius: .75rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: #fff;
+    }
+
+    .essay-prompt {
+        font-weight: 600;
+    }
+
+    .essay-answer {
+        white-space: pre-wrap;
+        padding: .75rem;
+        border-radius: .5rem;
+        background: #fafafb;
+        border: 1px dashed #e5e7eb;
+    }
+
+    /* utility */
+    .btn-soft {
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+    }
+
+    /* keep container content aligned while hero is full width */
+    .container-fluid > .container {
+        padding-left: .5rem;
+        padding-right: .5rem;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        (function(){
+          // live totals
+          const essayInputs = Array.from(document.querySelectorAll('.essay-score'));
+          const essayChip = document.getElementById('essaySumChip');
+          const essayProg = document.getElementById('essayProgress');
+          const finalChip = document.getElementById('finalChip');
+          const finalProg = document.getElementById('finalProgress');
+
+          const mcqScore = @Model.McqScore.ToString("0.##", CultureInfo.InvariantCulture);
+          const essayMax = @Model.EssayMax.ToString("0.##", CultureInfo.InvariantCulture);
+          const finalMax = @Model.FinalMax.ToString("0.##", CultureInfo.InvariantCulture);
+
+          function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+
+          function recalc(){
+            let essaySum = 0;
+            essayInputs.forEach(i=>{
+              let v = parseFloat(i.value);
+              if(isNaN(v)) v = 0;
+              const m = parseFloat(i.dataset.max || "0");
+              v = clamp(v, 0, m);
+              essaySum += v;
+            });
+
+            const essayPct = essayMax > 0 ? clamp(Math.round(essaySum/essayMax*100),0,100) : 0;
+            essayChip.textContent = (Math.round(essaySum*100)/100).toString();
+            essayProg.style.width = essayPct + "%";
+
+            let final = mcqScore + essaySum;
+            final = clamp(final, 0, finalMax);
+            const finalPct = finalMax > 0 ? clamp(Math.round(final/finalMax*100),0,100) : 0;
+            finalChip.textContent = (Math.round(final*100)/100).toString();
+            finalProg.style.width = finalPct + "%";
+          }
+
+          essayInputs.forEach(i => i.addEventListener('input', recalc));
+          recalc();
+
+          let dirty = false;
+          document.getElementById('gradeForm').addEventListener('input', ()=>dirty=true);
+          window.addEventListener('beforeunload', function(e){
+            if(!dirty) return;
+            e.preventDefault(); e.returnValue = '';
+          });
+        })();
+    </script>
+}

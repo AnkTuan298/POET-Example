@@ -104,6 +104,7 @@ namespace POETWeb.Data
                 b.Property(x => x.MaxScore).HasPrecision(10, 2);   // decimal(10,2)
                 b.Property(x => x.AutoScore).HasPrecision(10, 2);  // decimal(10,2)
                 b.Property(x => x.FinalScore).HasPrecision(10, 2); // decimal(10,2)
+                b.Property(x => x.TeacherComment).HasMaxLength(8000);
 
                 b.HasOne(x => x.Assignment)
                  .WithMany(a => a.Attempts)
@@ -122,6 +123,7 @@ namespace POETWeb.Data
             {
                 b.Property(x => x.TextAnswer).HasMaxLength(8000);
                 b.Property(x => x.PointsAwarded).HasPrecision(10, 2); // decimal(10,2)
+                b.Property(x => x.TeacherComment).HasMaxLength(8000);
 
                 b.HasOne(x => x.Attempt)
                  .WithMany(a => a.Answers)

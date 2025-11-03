@@ -37,6 +37,9 @@ namespace POETWeb.Models
         public decimal? AutoScore { get; set; }
         public decimal? FinalScore { get; set; }
 
+        [MaxLength(8000)]
+        public string? TeacherComment { get; set; }
+
         public List<AssignmentAnswer> Answers { get; set; } = new();
     }
 
@@ -61,5 +64,8 @@ namespace POETWeb.Models
         // Kết quả chấm
         public bool? IsCorrect { get; set; }           // chỉ dùng cho MCQ
         public decimal? PointsAwarded { get; set; }    // MCQ: auto; Essay: chấm tay
+
+        [MaxLength(8000)]
+        public string? TeacherComment { get; set; }
     }
 }

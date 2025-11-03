@@ -8,7 +8,7 @@
 <div class="container py-3">
     <div class="d-flex align-items-center justify-content-between mb-3">
         <div>
-            <h3 class="mb-1">Create Assignment</h3>
+            <h3 class="mb-1">@((editId.HasValue ? "Edit" : "Create")) Assignment</h3>
             <div class="text-muted">Class ID: @Model.ClassId</div>
         </div>
         <div class="d-flex gap-2">
@@ -16,6 +16,34 @@
         </div>
     </div>
 
+    <!-- IMPORT FROM .TXT -->
+    <div class="card mb-3">
+        <div class="card-header bg-light fw-semibold">Import from .txt</div>
+        <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+            <form asp-action="ImportTxt"
+                  asp-controller="Assignment"
+                  method="post"
+                  enctype="multipart/form-data"
+                  class="d-flex gap-2 align-items-center flex-wrap">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="classId" value="@Model.ClassId" />
+                <input type="file" name="txtFile" accept=".txt" class="form-control" style="max-width:360px" />
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-file-earmark-text"></i> Import
+                </button>
+            </form>
+
+            <button type="button" class="btn btn-soft"
+                    data-bs-toggle="modal" data-bs-target="#importHelpModal">
+                <i class="bi bi-info-circle"></i> Import instructions
+            </button>
+
+            <a id="downloadTxtTemplate" class="btn btn-soft"
+               download="assignment-template.txt">Download template</a>
+        </div>
+    </div>
+
+    <!-- FORM CHÍNH -->
     <form asp-action="@(editId.HasValue ? "Edit" : "Create")" method="post" id="assForm">
         @Html.AntiForgeryToken()
         @if (editId.HasValue)
@@ -32,16 +60,18 @@
         <div asp-validation-summary="All" class="text-danger mb-2"></div>
 
         <div class="row g-3">
-            <div class="col-12 col-md-8">
+            <div class="col-12 col-md-6">
                 <label class="form-label fw-semibold">Title</label>
                 <input asp-for="Title" class="form-control" />
                 <span asp-validation-for="Title" class="text-danger"></span>
             </div>
 
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-semibold">Type (overall)</label>
-                <input class="form-control" value="Auto (MCQ / Essay / Mixed)" disabled />
-                <small class="text-muted">Loại tổng thể sẽ tự quyết dựa trên từng câu.</small>
+            <div class="col-6 col-md-3">
+                <label class="form-label fw-semibold">Total points (max)</label>
+                <input asp-for="TotalPointsMax"
+                       class="form-control total-max-input"
+                       type="number" min="1" max="100" />
+                <small class="text-muted">Giá trị từ 1 đến 100.</small>
             </div>
 
             <div class="col-12">
@@ -106,7 +136,9 @@
 
                     <div class="mb-3 col-12 col-md-3">
                         <label class="form-label fw-semibold">Points</label>
-                        <input asp-for="Questions[qi].Points" class="form-control" type="number" step="0.01" min="0" />
+                        <input asp-for="Questions[qi].Points"
+                               class="form-control points-input"
+                               type="number" step="0.5" min="0" />
                     </div>
 
                     @if (isMcq)
@@ -141,7 +173,6 @@
                                         onclick="return opAddChoice(@qi)">
                                     + Add choice
                                 </button>
-                                <small class="text-muted ms-2">Đánh dấu vòng tròn để chọn đáp án đúng.</small>
                             </div>
                         </div>
                     }
@@ -156,6 +187,13 @@
             </div>
         }
 
+        <div class="d-flex align-items-center justify-content-between mb-2 mt-1">
+            <div class="fw-semibold">
+                Total points: <span id="totalPoints">0</span> / <span id="totalMax">@Model.TotalPointsMax</span>
+            </div>
+            <span id="totalBadge" class="badge bg-danger d-none">Total must match the maximum</span>
+        </div>
+
         <div id="ass-bottom"></div>
 
         <div class="d-flex justify-content-between">
@@ -166,7 +204,7 @@
                 + Add question
             </button>
 
-            <button type="submit" class="btn btn-grad-amber"
+            <button type="submit" id="btnSave" class="btn btn-grad-amber"
                     onclick="document.getElementById('Op').value=''">
                 Save Assignment
             </button>
@@ -174,81 +212,259 @@
     </form>
 </div>
 
+<!-- Modal: Import instructions -->
+<div class="modal fade" id="importHelpModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header" style="background:linear-gradient(90deg,#6366f1,#22d3ee);color:#fff;">
+                <h5 class="modal-title">How to create the .txt file</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="mb-2">Mỗi đề thi là một file <code>.txt</code>. Tổng điểm các câu phải bằng <strong>“Total points (max)”</strong> mà giáo viên đặt (1–100).</p>
+
+                <h6 class="mt-3">1) Metadata</h6>
+<pre class="codebox">Title: Midterm Exam
+Description: This is a demo imported from txt.
+TotalPoints: 80
+Duration: 45
+MaxAttempts: 2
+OpenAt: 10/11/2025 08:00
+CloseAt: 12/11/2025 23:59</pre>
+
+                <h6 class="mt-3">2) Câu hỏi (mỗi câu cách nhau 1 dòng trống)</h6>
+<pre class="codebox">Q: What is 2+2?
+Type: MCQ
+Points: 5
+Choices:
+- 1
+- 3
+- 4
+- 5
+Answer: 3
+
+Q: Explain Newton's 2nd law.
+Type: Essay
+Points: 15</pre>
+
+                <ul class="small text-muted">
+                    <li><code>Points</code> bội số <code>0.5</code>, không âm.</li>
+                    <li>MCQ cần ít nhất 2 lựa chọn. <code>Answer</code> chấp nhận số (1..N) hoặc chữ cái (A, B, C...).</li>
+                    <li>Ngày giờ: <code>dd/MM/yyyy HH:mm</code>.</li>
+                    <li><code>TotalPoints</code> (1–100) là thang điểm tối đa; tổng các câu phải bằng giá trị này.</li>
+                </ul>
+
+                <h6 class="mt-3">3) Ví dụ hoàn chỉnh (80 điểm)</h6>
+<pre class="codebox">Title: Sample Exam
+Description: Demo import
+TotalPoints: 80
+Duration: 30
+MaxAttempts: 1
+OpenAt: 03/11/2025 08:00
+CloseAt: 05/11/2025 23:59
+
+Q: What is 2+2?
+Type: MCQ
+Points: 5
+Choices:
+- 1
+- 3
+- 4
+- 5
+Answer: 3
+
+Q: Capital of France?
+Type: MCQ
+Points: 5
+Choices:
+- Berlin
+- Paris
+- Rome
+- Madrid
+Answer: 2
+
+Q: Short essay about climate change.
+Type: Essay
+Points: 70</pre>
+
+                <div class="alert alert-light border small mb-0">
+                    <strong>Lưu ý:</strong> Nếu tổng điểm câu hỏi ≠ <em>TotalPoints</em> hoặc sai format, hệ thống sẽ báo lỗi và chưa cho lưu. Bạn có thể chỉnh trực tiếp trên form sau import.
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-soft {
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+    }
+
+    .codebox {
+        background: #0f172a;
+        color: #e5e7eb;
+        border-radius: .5rem;
+        padding: .75rem 1rem;
+        font-size: .875rem;
+        white-space: pre-wrap;
+        overflow: auto;
+        border: 1px solid #111827;
+    }
+</style>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
     <script>
-        /* ===== Toggle MCQ/Essay UI ===== */
-        function setMcqBlockEnabled(qIndex, enable) {
-            const block = document.querySelector('.mcq-block[data-for="' + qIndex + '"]');
-            const essay = document.querySelector('.essay-block[data-for="' + qIndex + '"]');
-            if (block) {
-                block.querySelectorAll('input,select,textarea,button').forEach(el => {
-                    if (el.type === 'submit') return; // giữ nút lệnh hoạt động
-                    el.disabled = !enable;
+                /* ===== Toggle MCQ/Essay UI ===== */
+                function setMcqBlockEnabled(qIndex, enable) {
+                    const block = document.querySelector('.mcq-block[data-for="' + qIndex + '"]');
+                    const essay = document.querySelector('.essay-block[data-for="' + qIndex + '"]');
+                    if (block) {
+                        block.querySelectorAll('input,select,textarea,button').forEach(el => {
+                            if (el.type === 'submit') return; // giữ nút lệnh hoạt động
+                            el.disabled = !enable;
+                        });
+                        block.style.display = enable ? 'block' : 'none';
+                    }
+                    if (essay) essay.style.display = enable ? 'none' : 'block';
+                }
+
+                document.querySelectorAll('.q-type').forEach(function (sel) {
+                    sel.addEventListener('change', function () {
+                        var idx = this.getAttribute('data-qindex');
+                        var isMcq = this.value === '1';
+                        setMcqBlockEnabled(idx, isMcq);
+                    }, { passive: true });
                 });
-                block.style.display = enable ? 'block' : 'none';
-            }
-            if (essay) essay.style.display = enable ? 'none' : 'block';
-        }
 
-        document.querySelectorAll('.q-type').forEach(function (sel) {
-            sel.addEventListener('change', function () {
-                var idx = this.getAttribute('data-qindex');
-                var isMcq = this.value === '1';
-                setMcqBlockEnabled(idx, isMcq);
-            }, { passive: true });
-        });
+                // init state after render
+                document.addEventListener('DOMContentLoaded', function () {
+                    document.querySelectorAll('.q-type').forEach(function (sel) {
+                        var idx = sel.getAttribute('data-qindex');
+                        var isMcq = sel.value === '1';
+                        setMcqBlockEnabled(idx, isMcq);
+                    });
+                }, { once: true });
 
-        // init state after render
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('.q-type').forEach(function (sel) {
-                var idx = sel.getAttribute('data-qindex');
-                var isMcq = sel.value === '1';
-                setMcqBlockEnabled(idx, isMcq);
-            });
-        }, { once: true });
+                /* ===== Postback scroll restore ===== */
+                (function () {
+                    const KEY_POS = 'ass-create-scrollY';
+                    const KEY_ANCHOR = 'ass-create-anchor';
 
-        /* ===== Postback scroll restore ===== */
-        (function () {
-            const KEY_POS = 'ass-create-scrollY';
-            const KEY_ANCHOR = 'ass-create-anchor';
+                    document.querySelectorAll('#assForm button[type="submit"]').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const a = btn.getAttribute('data-anchor') || '';
+                            if (a) {
+                                sessionStorage.setItem(KEY_ANCHOR, a);
+                            } else {
+                                sessionStorage.setItem(KEY_POS, String(window.scrollY || window.pageYOffset || 0));
+                            }
+                        }, { passive: true });
+                    });
 
-            // Lưu anchor hoặc scrollY trước khi submit
-            document.querySelectorAll('#assForm button[type="submit"]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const a = btn.getAttribute('data-anchor') || '';
-                    if (a) {
-                        sessionStorage.setItem(KEY_ANCHOR, a);
-                    } else {
-                        sessionStorage.setItem(KEY_POS, String(window.scrollY || window.pageYOffset || 0));
+                    window.addEventListener('DOMContentLoaded', () => {
+                        const a = sessionStorage.getItem(KEY_ANCHOR);
+                        if (a) {
+                            const el = document.querySelector(a);
+                            if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+                            sessionStorage.removeItem(KEY_ANCHOR);
+                            return;
+                        }
+                        const y = parseInt(sessionStorage.getItem(KEY_POS) || '0', 10);
+                        if (!isNaN(y) && y > 0) window.scrollTo(0, y);
+                        sessionStorage.removeItem(KEY_POS);
+                    }, { once: true });
+                })();
+
+                /* ===== Command helpers ===== */
+                function setOp(op, qIndex, choiceIndex) {
+                    document.getElementById('Op').value = op;
+                    if (qIndex !== undefined) document.getElementById('QIndex').value = qIndex;
+                    if (choiceIndex !== undefined) document.getElementById('ChoiceIndex').value = choiceIndex;
+                }
+                function opAddQ() { setOp('add-q'); return true; }
+                function opRemoveQ(i) { setOp('remove-q', i); return true; }
+                function opAddChoice(i) { setOp('add-choice', i); return true; }
+                function opRemoveChoice(i, c) { setOp('remove-choice', i, c); return true; }
+
+                // ==== Total points live check (sum == max) ====
+                function recalcTotal() {
+                    let sum = 0;
+                    document.querySelectorAll('.points-input').forEach(inp => {
+                        let v = parseFloat((inp.value || '').toString().replace(',', '.'));
+                        if (!isNaN(v)) sum += v;
+                    });
+                    const maxInp = document.querySelector('.total-max-input');
+                    let max = parseInt(maxInp?.value || '100', 10);
+                    if (isNaN(max) || max < 1) max = 1;
+                    if (max > 100) max = 100;
+
+                    const tp = document.getElementById('totalPoints');
+                    const tm = document.getElementById('totalMax');
+                    const badge = document.getElementById('totalBadge');
+                    const btn = document.getElementById('btnSave');
+
+                    tp.textContent = (Math.round(sum * 100) / 100).toFixed(2).replace(/\.00$/, '');
+                    tm.textContent = String(max);
+
+                    const ok = Math.abs(sum - max) < 1e-9;
+                    if (ok) { badge.classList.add('d-none'); btn?.removeAttribute('disabled'); }
+                    else    { badge.classList.remove('d-none'); btn?.setAttribute('disabled', 'disabled'); }
+                }
+
+                document.addEventListener('input', e => {
+                    if (e.target && (e.target.classList.contains('points-input') || e.target.classList.contains('total-max-input'))) {
+                        recalcTotal();
                     }
                 }, { passive: true });
-            });
 
-            // Khôi phục sau khi nạp lại
-            window.addEventListener('DOMContentLoaded', () => {
-                const a = sessionStorage.getItem(KEY_ANCHOR);
-                if (a) {
-                    const el = document.querySelector(a);
-                    if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
-                    sessionStorage.removeItem(KEY_ANCHOR);
-                    return;
-                }
-                const y = parseInt(sessionStorage.getItem(KEY_POS) || '0', 10);
-                if (!isNaN(y) && y > 0) window.scrollTo(0, y);
-                sessionStorage.removeItem(KEY_POS);
-            }, { once: true });
-        })();
+                document.addEventListener('DOMContentLoaded', () => {
+                    recalcTotal();
 
-        /* ===== Command helpers ===== */
-        function setOp(op, qIndex, choiceIndex) {
-            document.getElementById('Op').value = op;
-            if (qIndex !== undefined) document.getElementById('QIndex').value = qIndex;
-            if (choiceIndex !== undefined) document.getElementById('ChoiceIndex').value = choiceIndex;
-        }
-        function opAddQ() { setOp('add-q'); return true; }
-        function opRemoveQ(i) { setOp('remove-q', i); return true; }
-        function opAddChoice(i) { setOp('add-choice', i); return true; }
-        function opRemoveChoice(i, c) { setOp('remove-choice', i, c); return true; }
+                    // Gắn nội dung template vào nút download (có TotalPoints)
+                    const tpl = `Title: Sample Exam
+        Description: Demo import
+        TotalPoints: 80
+        Duration: 30
+        MaxAttempts: 1
+        OpenAt: 03/11/2025 08:00
+        CloseAt: 05/11/2025 23:59
+
+        Q: What is 2+2?
+        Type: MCQ
+        Points: 5
+        Choices:
+        - 1
+        - 3
+        - 4
+        - 5
+        Answer: 3
+
+        Q: Capital of France?
+        Type: MCQ
+        Points: 5
+        Choices:
+        - Berlin
+        - Paris
+        - Rome
+        - Madrid
+        Answer: 2
+
+        Q: Short essay about climate change.
+        Type: Essay
+        Points: 70`;
+                    const a = document.getElementById('downloadTxtTemplate');
+                    if(a){
+                        const blob = new Blob([tpl], {type: 'text/plain;charset=utf-8'});
+                        a.href = URL.createObjectURL(blob);
+                    }
+                }, { once: true });
     </script>
 }

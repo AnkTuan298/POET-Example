@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -91,7 +93,7 @@ namespace POETWeb.Controllers
 
             return View(vm);
         }
-
+        // FUNCTIONs OF TEACHER
         // TEACHER: danh sách
         [Authorize(Roles = "Teacher")]
         [HttpGet]
@@ -615,7 +617,7 @@ namespace POETWeb.Controllers
             return RedirectToAction(nameof(Student), new { classId = att.Assignment.ClassId });
         }
 
-        // ==== NEW: TEST HISTORY ====
+        // ==== TEST HISTORY ====
         [Authorize(Roles = "Student")]
         [HttpGet]
         public async Task<IActionResult> History(int id)
@@ -742,6 +744,474 @@ namespace POETWeb.Controllers
             return PartialView("_TestHistoryModal", vm);
         }
 
+        // ==== TEACHER: SUBMISSIONS ====
+        [Authorize(Roles = "Teacher")]
+        [HttpGet]
+        public async Task<IActionResult> Submissions(int id)
+        {
+            var me = await _userManager.GetUserAsync(User);
+
+            var a = await _db.Assignments
+                .Include(x => x.Class)
+                .FirstOrDefaultAsync(x => x.Id == id && x.Class.TeacherId == me!.Id);
+            if (a == null) return NotFound();
+
+            var attempts = await _db.AssignmentAttempts
+                .AsNoTracking()
+                .Include(t => t.Answers)
+                .Include(t => t.Assignment).ThenInclude(A => A.Questions).ThenInclude(q => q.Choices)
+                .Where(t => t.AssignmentId == id)
+                .OrderByDescending(t => t.SubmittedAt ?? t.StartedAt)
+                .ToListAsync();
+
+            var userIds = attempts.Select(t => t.UserId).Distinct().ToList();
+            var users = await _db.Users.Where(u => userIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.FullName, u.Email })
+                .ToDictionaryAsync(u => u.Id, u => u);
+
+            var list = new List<SubmissionListItemVM>();
+
+            foreach (var t in attempts)
+            {
+                var mcqQs = t.Assignment.Questions.Where(q => q.Type == QuestionType.Mcq).ToList();
+                var essayQs = t.Assignment.Questions.Where(q => q.Type == QuestionType.Essay).ToList();
+                var mcqIds = mcqQs.Select(q => q.Id).ToHashSet();
+
+                var mcqMax = mcqQs.Sum(q => q.Points);
+                var essayMax = essayQs.Sum(q => q.Points);
+                var finalMax = mcqMax + essayMax;
+
+                decimal mcqScore = t.AutoScore ?? 0m;
+                if (!t.AutoScore.HasValue)
+                {
+                    var correctByQ = mcqQs.ToDictionary(q => q.Id, q => q.Choices.FirstOrDefault(c => c.IsCorrect)?.Id);
+                    var qPoints = mcqQs.ToDictionary(q => q.Id, q => q.Points);
+                    mcqScore = t.Answers
+                        .Where(a => mcqIds.Contains(a.QuestionId) &&
+                            (a.IsCorrect == true ||
+                             (a.IsCorrect == null && a.SelectedChoiceId.HasValue &&
+                              correctByQ.TryGetValue(a.QuestionId, out var cc) && cc.HasValue && cc.Value == a.SelectedChoiceId.Value)))
+                        .Sum(a => qPoints[a.QuestionId]);
+                }
+
+                // Essay score
+                var essayScore = t.Answers
+                    .Where(a => !mcqIds.Contains(a.QuestionId))
+                    .Where(a => a.PointsAwarded.HasValue)
+                    .Sum(a => a.PointsAwarded!.Value);
+
+                decimal? essayScoreNullable = essayMax == 0 ? 0m : (t.RequiresManualGrading ? (decimal?)essayScore : 0m);
+                decimal? finalScore = t.FinalScore ?? (t.RequiresManualGrading ? (decimal?)null : mcqScore);
+
+                users.TryGetValue(t.UserId, out var u);
+
+                list.Add(new SubmissionListItemVM
+                {
+                    AttemptId = t.Id,
+                    AttemptNumber = t.AttemptNumber,
+                    StudentId = t.UserId,
+                    StudentName = u?.FullName ?? "(unknown)",
+                    StudentEmail = u?.Email ?? "",
+                    StartedAt = t.StartedAt,
+                    SubmittedAt = t.SubmittedAt,
+                    Status = t.Status.ToString(),
+
+                    McqScore = mcqScore,
+                    McqMax = mcqMax,
+                    EssayScore = essayScoreNullable,
+                    EssayMax = essayMax,
+                    FinalScore = finalScore,
+                    FinalMax = finalMax,
+
+                    RequiresManual = t.RequiresManualGrading
+                });
+            }
+
+            var vm = new SubmissionsVM
+            {
+                AssignmentId = a.Id,
+                ClassId = a.ClassId,
+                AssignmentTitle = a.Title,
+                Items = list
+            };
+
+            return View("Submissions", vm);
+        }
+
+        // TEACHER: chấm điểm
+        [Authorize(Roles = "Teacher")]
+        [HttpGet]
+        public async Task<IActionResult> Grade(int attemptId)
+        {
+            var me = await _userManager.GetUserAsync(User);
+
+            var t = await _db.AssignmentAttempts
+                .Include(x => x.Assignment).ThenInclude(a => a.Class)
+                .Include(x => x.Assignment).ThenInclude(a => a.Questions).ThenInclude(q => q.Choices)
+                .Include(x => x.Answers)
+                .FirstOrDefaultAsync(x => x.Id == attemptId && x.Assignment.Class.TeacherId == me!.Id);
+            if (t == null) return NotFound();
+
+            var u = await _db.Users.Where(x => x.Id == t.UserId)
+                .Select(x => new { x.Id, x.FullName, x.Email }).FirstOrDefaultAsync();
+
+            var mcqQs = t.Assignment.Questions.Where(q => q.Type == QuestionType.Mcq).OrderBy(q => q.Order).ToList();
+            var essayQs = t.Assignment.Questions.Where(q => q.Type == QuestionType.Essay).OrderBy(q => q.Order).ToList();
+            var mcqIds = mcqQs.Select(q => q.Id).ToHashSet();
+
+            var mcqMax = mcqQs.Sum(q => q.Points);
+            var essayMax = essayQs.Sum(q => q.Points);
+            var finalMax = mcqMax + essayMax;
+
+            decimal mcqScore = t.AutoScore ?? 0m;
+            if (!t.AutoScore.HasValue)
+            {
+                var correctByQ = mcqQs.ToDictionary(q => q.Id, q => q.Choices.FirstOrDefault(c => c.IsCorrect)?.Id);
+                var qPoints = mcqQs.ToDictionary(q => q.Id, q => q.Points);
+                mcqScore = t.Answers
+                    .Where(a => mcqIds.Contains(a.QuestionId) &&
+                        (a.IsCorrect == true ||
+                         (a.IsCorrect == null && a.SelectedChoiceId.HasValue &&
+                          correctByQ.TryGetValue(a.QuestionId, out var cc) && cc.HasValue && cc.Value == a.SelectedChoiceId.Value)))
+                    .Sum(a => qPoints[a.QuestionId]);
+            }
+
+            var essays = new List<GradeEssayItemVM>();
+            foreach (var q in essayQs)
+            {
+                var ans = t.Answers.FirstOrDefault(a => a.QuestionId == q.Id);
+                essays.Add(new GradeEssayItemVM
+                {
+                    QuestionId = q.Id,
+                    Prompt = q.Prompt,
+                    MaxPoints = q.Points,
+                    StudentAnswer = ans?.TextAnswer,
+                    Score = ans?.PointsAwarded,
+                    Comment = ans?.TeacherComment
+                });
+            }
+
+            var vm = new GradeAttemptVM
+            {
+                AssignmentId = t.AssignmentId,
+                AssignmentTitle = t.Assignment.Title,
+                AttemptId = t.Id,
+                AttemptNumber = t.AttemptNumber,
+                StudentId = u?.Id ?? t.UserId,
+                StudentName = u?.FullName ?? "(unknown)",
+                StudentEmail = u?.Email ?? "",
+
+                StartedAt = t.StartedAt,
+                SubmittedAt = t.SubmittedAt,
+                Status = t.Status.ToString(),
+
+                McqScore = mcqScore,
+                McqMax = mcqMax,
+                EssayMax = essayMax,
+                CurrentEssayScore = t.Answers.Where(a => !mcqIds.Contains(a.QuestionId)).Sum(a => a.PointsAwarded ?? 0m),
+                FinalMax = finalMax,
+                CurrentFinalScore = t.FinalScore,
+
+                Essays = essays,
+                TeacherComment = t.TeacherComment       // nếu đã thêm field
+            };
+
+            return View("Grade", vm);
+        }
+
+        // TEACHER: lưu điểm chấm
+        [Authorize(Roles = "Teacher")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Grade(GradeAttemptVM vm)
+        {
+            var me = await _userManager.GetUserAsync(User);
+
+            var t = await _db.AssignmentAttempts
+                .Include(x => x.Assignment).ThenInclude(a => a.Questions)
+                .Include(x => x.Answers)
+                .FirstOrDefaultAsync(x => x.Id == vm.AttemptId && x.Assignment.Class.TeacherId == me!.Id);
+            if (t == null) return NotFound();
+
+            // Validate & apply essay scores/comments
+            decimal essayScore = 0m;
+
+            foreach (var e in vm.Essays ?? new List<GradeEssayItemVM>())
+            {
+                var q = t.Assignment.Questions.FirstOrDefault(x => x.Id == e.QuestionId && x.Type == QuestionType.Essay);
+                if (q == null) continue;
+
+                if (e.Score.HasValue)
+                {
+                    if (e.Score.Value < 0 || e.Score.Value > q.Points)
+                        ModelState.AddModelError("", $"Score must be between 0 and {q.Points}.");
+                    if (e.Score.Value % 0.5m != 0)
+                        ModelState.AddModelError("", "Essay scores must be multiples of 0.5.");
+                }
+            }
+
+            if (!ModelState.IsValid)
+                return View("Grade", vm);
+
+            foreach (var e in vm.Essays ?? new List<GradeEssayItemVM>())
+            {
+                var ans = t.Answers.FirstOrDefault(a => a.QuestionId == e.QuestionId);
+                if (ans == null) continue;
+
+                ans.PointsAwarded = e.Score;                 // lưu điểm câu Essay
+                                                             // Nếu đã thêm field:
+                ans.TeacherComment = e.Comment;              // lưu comment câu
+
+                if (e.Score.HasValue) essayScore += e.Score.Value;
+            }
+
+            // overall comment (nếu đã thêm field)
+            t.TeacherComment = vm.TeacherComment;
+
+            // Final = Auto(MCQ) + sum Essay
+            var mcq = t.AutoScore ?? 0m;
+            t.FinalScore = mcq + essayScore;
+            t.Status = AttemptStatus.Graded;
+
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(Submissions), new { id = t.AssignmentId });
+        }
+
+        // ====== IMPORT FROM TXT ======
+        [Authorize(Roles = "Teacher")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ImportTxt(int classId, IFormFile txtFile)
+        {
+            if (!await TeacherOwnsClassAsync(classId)) return Forbid();
+
+            if (txtFile == null || txtFile.Length == 0)
+            {
+                ModelState.AddModelError(string.Empty, "Please choose a non-empty .txt file.");
+                return await Create(classId);
+            }
+
+            AssignmentCreateVM vm;
+            using (var stream = txtFile.OpenReadStream())
+            using (var reader = new StreamReader(stream, Encoding.UTF8, true))
+            {
+                var raw = await reader.ReadToEndAsync();
+                try
+                {
+                    vm = ParseAssignmentTxt(raw, classId);
+                }
+                catch (FormatException ex)
+                {
+                    ModelState.AddModelError(string.Empty, $"Import error: {ex.Message}");
+                    return await Create(classId);
+                }
+            }
+
+            // Cho user thấy form đã đổ dữ liệu (validation chi tiết làm ở Save)
+            ValidateAssignment(vm);
+            return View("Create", vm);
+        }
+
+        private static readonly string[] TrueLetters =
+            new[] { "A","B","C","D","E","F","G","H","I","J","K","L","M",
+            "N","O","P","Q","R","S","T","U","V","W","X","Y","Z" };
+
+        private AssignmentCreateVM ParseAssignmentTxt(string raw, int classId)
+        {
+            var vm = new AssignmentCreateVM
+            {
+                ClassId = classId,
+                Type = AssignmentType.Mcq, // sẽ auto quyết định lại sau
+                DurationMinutes = 30,
+                MaxAttempts = 1,
+                TotalPointsMax = 100,      // MẶC ĐỊNH 100 nếu file không chỉ định
+                Questions = new List<CreateQuestionVM>()
+            };
+
+            if (string.IsNullOrWhiteSpace(raw))
+                throw new FormatException("Empty file.");
+
+            var lines = raw.Replace("\r\n", "\n").Split('\n');
+            int i = 0;
+
+            // helpers
+            Func<string, bool> isBlank = s => string.IsNullOrWhiteSpace(s?.Trim());
+            string peek(int k = 0) => i + k < lines.Length ? lines[i + k] : "";
+            string read() => i < lines.Length ? lines[i++] : "";
+
+            // ======= METADATA =======
+            while (i < lines.Length)
+            {
+                var line = peek();
+                if (line.TrimStart().StartsWith("Q:", StringComparison.OrdinalIgnoreCase))
+                    break;
+
+                read();
+                var t = line.Trim();
+
+                if (t.StartsWith("Title:", StringComparison.OrdinalIgnoreCase)) vm.Title = t.Substring(6).Trim();
+                else if (t.StartsWith("Description:", StringComparison.OrdinalIgnoreCase)) vm.Description = t.Substring(12).Trim();
+                else if (t.StartsWith("TotalPoints:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var v = ParseInt(t.Substring(12).Trim(), "TotalPoints");
+                    if (v < 1 || v > 100) throw new FormatException("TotalPoints must be between 1 and 100.");
+                    vm.TotalPointsMax = v;
+                }
+                else if (t.StartsWith("Duration:", StringComparison.OrdinalIgnoreCase)) vm.DurationMinutes = ParseInt(t.Substring(9).Trim(), "Duration");
+                else if (t.StartsWith("MaxAttempts:", StringComparison.OrdinalIgnoreCase)) vm.MaxAttempts = ParseInt(t.Substring(12).Trim(), "MaxAttempts");
+                else if (t.StartsWith("OpenAt:", StringComparison.OrdinalIgnoreCase)) vm.OpenAt = ParseDate(t.Substring(7).Trim(), "OpenAt");
+                else if (t.StartsWith("CloseAt:", StringComparison.OrdinalIgnoreCase)) vm.CloseAt = ParseDate(t.Substring(8).Trim(), "CloseAt");
+                else if (isBlank(t)) { /* skip */ }
+            }
+
+            if (string.IsNullOrWhiteSpace(vm.Title))
+                throw new FormatException("Missing Title.");
+
+            // ======= QUESTIONS =======
+            while (i < lines.Length)
+            {
+                while (i < lines.Length && isBlank(peek())) read();
+                if (i >= lines.Length) break;
+
+                var header = read();
+                if (!header.TrimStart().StartsWith("Q:", StringComparison.OrdinalIgnoreCase))
+                    throw new FormatException($"Expect 'Q:' at line {i}.");
+
+                var q = new CreateQuestionVM
+                {
+                    Type = QuestionType.Mcq,
+                    Points = 1m,
+                    Prompt = header.Substring(header.IndexOf(':') + 1).Trim(),
+                    Choices = new List<CreateChoiceVM>()
+                };
+
+                while (i < lines.Length && !isBlank(peek()) &&
+                       !peek().TrimStart().StartsWith("Q:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var l = read().Trim();
+
+                    if (l.StartsWith("Type:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var v = l.Substring(5).Trim().ToLowerInvariant();
+                        q.Type = v.StartsWith("mcq") ? QuestionType.Mcq : QuestionType.Essay;
+                    }
+                    else if (l.StartsWith("Points:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        q.Points = ParseDecimal(l.Substring(7).Trim(), "Points");
+                        if (q.Points < 0 || (q.Points % 0.5m != 0))
+                            throw new FormatException("Each question's Points must be non-negative and multiple of 0.5.");
+                    }
+                    else if (l.StartsWith("Choices:", StringComparison.OrdinalIgnoreCase))
+                    {
+
+                        while (i < lines.Length)
+                        {
+                            var rawLine = peek();
+                            var cLine = rawLine.Trim();
+                            if (isBlank(cLine)) break;
+                            if (cLine.StartsWith("Q:", StringComparison.OrdinalIgnoreCase)) break;
+                            if (cLine.StartsWith("Type:", StringComparison.OrdinalIgnoreCase)) break;
+                            if (cLine.StartsWith("Points:", StringComparison.OrdinalIgnoreCase)) break;
+                            if (cLine.StartsWith("Answer:", StringComparison.OrdinalIgnoreCase)) break;
+
+                            bool looksChoice = cLine.StartsWith("-", StringComparison.Ordinal)
+                                            || (cLine.Length >= 2 && cLine[1] == ')' && (char.IsLetter(cLine[0]) || char.IsDigit(cLine[0])));
+
+                            if (!looksChoice) break;
+
+                            read();
+                            string text = cLine;
+
+                            if (text.StartsWith("-", StringComparison.Ordinal))
+                                text = text.Substring(1).Trim();
+                            else if (text.Length >= 2 && text[1] == ')' && (char.IsLetter(text[0]) || char.IsDigit(text[0])))
+                                text = text.Substring(2).Trim();
+
+                            if (string.IsNullOrWhiteSpace(text))
+                                throw new FormatException("Choice text cannot be empty.");
+
+                            q.Choices!.Add(new CreateChoiceVM { Text = text });
+                        }
+                    }
+                    else if (l.StartsWith("Answer:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var v = l.Substring(7).Trim();
+
+                        int idx = -1;
+                        if (int.TryParse(v, NumberStyles.Integer, CultureInfo.InvariantCulture, out var num))
+                        {
+                            idx = Math.Max(1, num) - 1;
+                        }
+                        else
+                        {
+                            var letter = v.ToUpperInvariant();
+                            idx = Array.IndexOf(TrueLetters, letter);
+                        }
+                        q.CorrectIndex = idx;
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(q.Prompt))
+                    throw new FormatException("A question is missing its prompt.");
+
+                if (q.Type == QuestionType.Mcq)
+                {
+                    if (q.Choices == null || q.Choices.Count < 2)
+                        throw new FormatException("MCQ must have at least 2 choices.");
+                    if (q.CorrectIndex < 0 || q.CorrectIndex >= q.Choices.Count)
+                        throw new FormatException("MCQ Answer index is invalid.");
+                }
+                else
+                {
+                    q.Choices = new List<CreateChoiceVM>();
+                    q.CorrectIndex = 0;
+                }
+
+                vm.Questions.Add(q);
+
+                while (i < lines.Length && isBlank(peek())) read();
+            }
+
+            // Suy luận overall type
+            var hasMcq = vm.Questions.Any(z => z.Type == QuestionType.Mcq);
+            var hasEssay = vm.Questions.Any(z => z.Type == QuestionType.Essay);
+            vm.Type = hasMcq && hasEssay ? AssignmentType.Mixed
+                      : hasMcq ? AssignmentType.Mcq
+                      : AssignmentType.Essay;
+
+
+            var total = vm.Questions.Sum(z => z.Points);
+            if (total != vm.TotalPointsMax)
+                throw new FormatException($"Total points must be {vm.TotalPointsMax}. Current total: {total:0.##}");
+
+            return vm;
+
+            // Local helpers
+            static int ParseInt(string s, string field)
+            {
+                if (!int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v))
+                    throw new FormatException($"Invalid {field}.");
+                return v;
+            }
+            static decimal ParseDecimal(string s, string field)
+            {
+                if (!decimal.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+                    throw new FormatException($"Invalid {field}.");
+                return v;
+            }
+            static DateTimeOffset? ParseDate(string s, string field)
+            {
+                if (string.IsNullOrWhiteSpace(s)) return null;
+                if (DateTime.TryParseExact(s.Trim(),
+                    new[] { "dd/MM/yyyy HH:mm", "dd/MM/yyyy" },
+                    CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dt))
+                    return new DateTimeOffset(dt);
+                throw new FormatException($"Invalid {field} format. Use dd/MM/yyyy HH:mm.");
+            }
+        }
+
+
+
         // =========================== HELPERS ===========================
 
         private bool ApplyDesignerOp(AssignmentCreateVM vm)
@@ -779,19 +1249,33 @@ namespace POETWeb.Controllers
 
         private void ValidateAssignment(AssignmentCreateVM vm)
         {
+            // 1) Thời gian
             if (vm.OpenAt.HasValue && vm.CloseAt.HasValue && vm.CloseAt <= vm.OpenAt)
                 ModelState.AddModelError(nameof(vm.CloseAt), "Due date must be after Open date.");
 
+            // 2) Thang điểm tối đa (1..100)
+            if (vm.TotalPointsMax < 1 || vm.TotalPointsMax > 100)
+                ModelState.AddModelError(nameof(vm.TotalPointsMax), "Total points (max) must be between 1 and 100.");
+
+            // 3) Ít nhất 1 câu hỏi
             if (vm.Questions == null || vm.Questions.Count == 0)
                 ModelState.AddModelError(string.Empty, "At least one question is required.");
 
-            for (int i = 0; i < vm.Questions.Count; i++)
+            // 4) Validate từng câu
+            decimal total = 0m;
+            for (int i = 0; i < (vm.Questions?.Count ?? 0); i++)
             {
-                var q = vm.Questions[i];
+                var q = vm.Questions![i];
 
-                if (q.Points % 0.5m != 0)
-                    ModelState.AddModelError($"Questions[{i}].Points", "Points must be a multiple of 0.01.");
+                // Prompt
+                if (string.IsNullOrWhiteSpace(q.Prompt))
+                    ModelState.AddModelError($"Questions[{i}].Prompt", "Prompt is required.");
 
+                // Points: không âm & bội số 0.5
+                if (q.Points < 0 || (q.Points % 0.5m != 0))
+                    ModelState.AddModelError($"Questions[{i}].Points", "Points must be a multiple of 0.5 and not negative.");
+
+                // MCQ: tối thiểu 2 lựa chọn + chỉ mục đáp án hợp lệ
                 if (q.Type == QuestionType.Mcq)
                 {
                     if (q.Choices == null || q.Choices.Count < 2)
@@ -801,10 +1285,21 @@ namespace POETWeb.Controllers
                         ModelState.AddModelError($"Questions[{i}].CorrectIndex", "Select a valid correct answer.");
                 }
 
-                if (string.IsNullOrWhiteSpace(q.Prompt))
-                    ModelState.AddModelError($"Questions[{i}].Prompt", "Prompt is required.");
+                total += q.Points;
+            }
+
+            // 5) Tổng điểm phải KHỚP với TotalPointsMax
+            const decimal EPS = 0.0000001m;
+            if (vm.Questions != null && vm.Questions.Count > 0)
+            {
+                if (Math.Abs(total - vm.TotalPointsMax) > EPS)
+                    ModelState.AddModelError(string.Empty,
+                        $"Total points must equal {vm.TotalPointsMax}. Current total: {total:0.##}.");
             }
         }
+
+
+
 
         private async Task EnsureTeacherOwnsClassAsync(int classId)
         {

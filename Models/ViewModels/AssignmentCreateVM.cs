@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using POETWeb.Models.Enums;
+using Microsoft.AspNetCore.Http;
 
 namespace POETWeb.Models.ViewModels
 {
@@ -24,6 +25,10 @@ namespace POETWeb.Models.ViewModels
         public string? Op { get; set; }
         public int? QIndex { get; set; }
         public int? ChoiceIndex { get; set; }
+        public IFormFile? ImportFile { get; set; }
+        public string? ImportErrors { get; set; }
+        public int TotalPointsMax { get; set; } = 100;
+
     }
 
     public class CreateQuestionVM
