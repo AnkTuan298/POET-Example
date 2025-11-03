@@ -1,0 +1,154 @@
+﻿@model POETWeb.Models.ViewModels.TestHistoryVM
+
+<div class="modal fade modal-history" id="testHistoryModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1000px;">
+        <div class="modal-content shadow-lg border-0 rounded-4 overflow-hidden">
+            <div class="modal-header" style="background:linear-gradient(90deg,#6366f1,#22d3ee); color:#fff;">
+                <div>
+                    <h5 class="modal-title">@Model.AssignmentTitle</h5>
+                    <div class="small opacity-90">Test history</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                @if (Model.Attempts.Count == 0)
+                {
+                    <div class="text-center py-4">
+                        <div class="mb-1">Chưa có lần làm nào.</div>
+                        <small class="text-muted">Bấm “Start” để bắt đầu attempt đầu tiên.</small>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge bg-warning text-dark">Attempts: @Model.Attempts.Count / @Model.MaxAttempts</span>
+                    </div>
+
+                    <!-- hiển thị ~5 hàng, phần body cuộn -->
+                    <div class="table-responsive" style="max-height: 340px; overflow:auto;">
+                        <table class="table align-middle mb-0">
+                            <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+                                <tr>
+                                    <th style="white-space:nowrap;">#</th>
+                                    <th style="white-space:nowrap;">Started</th>
+                                    <th style="white-space:nowrap;">Submitted</th>
+                                    <th style="white-space:nowrap;">Duration</th>
+                                    <th style="white-space:nowrap;">MCQ</th>
+                                    <th style="white-space:nowrap;">Essay</th>
+                                    <th style="white-space:nowrap;">Final</th>
+                                    <th style="white-space:nowrap;">Status</th>
+                                    <th style="width:1%; white-space:nowrap;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var a in Model.Attempts)
+                                {
+                                    var dur = TimeSpan.FromMinutes(a.DurationMinutes);
+                                    string mcqBadgeCls = (a.McqMax > 0 && a.McqScore >= a.McqMax * 0.5m) ? "bg-success" : "bg-secondary";
+                                    string finalBadgeCls = (a.FinalMax > 0 && (a.FinalScore ?? 0m) >= a.FinalMax * 0.5m) ? "bg-success" : "bg-secondary";
+
+                                    <tr>
+                                        <td class="fw-semibold">Attempt @a.AttemptNumber</td>
+                                        <td>@a.StartedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td>@(a.SubmittedAt.HasValue? a.SubmittedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "—")</td>
+                                        <td>@(dur.TotalMinutes >= 1 ? $"{(int)dur.TotalMinutes} min" : $"{dur.Seconds}s")</td>
+
+                                        <!-- MCQ -->
+                                        <td style="white-space:nowrap;">
+                                            <div>
+                                                <span class="badge @mcqBadgeCls">
+                                                    @a.McqScore.ToString("0.##") / @a.McqMax.ToString("0.##")
+                                                </span>
+                                            </div>
+                                            <div class="small text-muted">@a.McqCorrect / @a.McqTotal correct</div>
+                                        </td>
+
+                                        <!-- Essay -->
+                                        <td style="white-space:nowrap;">
+                                            @if (!a.RequiresManual)
+                                            {
+                                                <span class="badge bg-secondary">0 / @a.EssayMax.ToString("0.##")</span>
+                                            }
+                                            else if (a.EssayScore.HasValue)
+                                            {
+                                                <span class="badge bg-info">@a.EssayScore.Value.ToString("0.##") / @a.EssayMax.ToString("0.##")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark">Pending</span>
+                                                <span class="small text-muted">/ @a.EssayMax.ToString("0.##")</span>
+                                            }
+                                        </td>
+
+                                        <!-- Final -->
+                                        <td style="white-space:nowrap;">
+                                            @if (a.FinalScore.HasValue)
+                                            {
+                                                <span class="badge @finalBadgeCls">
+                                                    @a.FinalScore.Value.ToString("0.##") / @a.FinalMax.ToString("0.##")
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark">Pending</span>
+                                                <span class="small text-muted">/ @a.FinalMax.ToString("0.##")</span>
+                                            }
+                                        </td>
+
+                                        <!-- Status -->
+                                        <td style="white-space:nowrap;">
+                                            @{
+                                                var st = (a.Status ?? "").Trim();
+                                                if (st.Equals("Graded", StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    <span class="badge bg-success">Graded</span>
+                                                    ;
+                                                }
+                                                else if (st.Equals("Submitted", StringComparison.OrdinalIgnoreCase))
+                                                {
+
+                                                    <span class="badge bg-warning text-dark">Submitted</span>
+                                                    ;
+                                                }
+                                                else if (st.Equals("Late", StringComparison.OrdinalIgnoreCase))
+                                                {
+
+                                                    <span class="badge bg-dark">Late</span>
+                                                    ;
+                                                }
+                                                else if (st.Equals("InProgress", StringComparison.OrdinalIgnoreCase))
+                                                {
+
+                                                    <span class="badge bg-info">In progress</span>
+                                                    ;
+                                                }
+                                                else
+                                                {
+
+                                                    <span class="badge bg-secondary">—</span>
+                                                    ;
+                                                }
+                                            }
+                                        </td>
+
+                                        <td class="text-end" style="white-space:nowrap;">
+                                            <a asp-action="Review" asp-route-attemptId="@a.AttemptId" class="btn btn-sm btn-outline-primary">View</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer justify-content-between">
+                <small class="text-muted">
+                    Phần MCQ sẽ có điểm ngay khi nộp. Essay sẽ hiển thị <strong>Pending</strong> cho đến khi giáo viên chấm. Final = MCQ + Essay.
+                </small>
+                <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

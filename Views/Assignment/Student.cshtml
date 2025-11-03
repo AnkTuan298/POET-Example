@@ -68,6 +68,7 @@
                              data-due="@(a.DueAt.HasValue? a.DueAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "No due date")"
                              data-duration="@(a.DurationMinutes)"
                              data-max="@a.MaxAttempts"
+                             data-used="@a.AttemptsUsed"
                              data-desc="@a.Description"
                              data-start-url="@Url.Action("Take", "Assignment", new { id = a.Id, index = 0 })"
                              data-history-url="@Url.Action("History", "Assignment", new { id = a.Id })">
@@ -165,7 +166,7 @@
             </div>
 
             <div class="modal-footer d-flex justify-content-between">
-                <div class="text-muted small" id="assModalHint">Review details before you start.</div>
+                <div class="small" id="assModalHint">Review details before you start.</div>
                 <div class="d-flex gap-2">
                     <a id="assModalHistoryBtn" href="#" class="btn btn-outline-secondary">
                         <i class="bi bi-journal-text"></i> Test history
@@ -247,24 +248,42 @@
         background: #eef2ff;
         color: #4f46e5;
     }
+
+    /* Disabled state cho <a> đóng vai trò button */
+    .btn-disabled {
+        pointer-events: none;
+        opacity: .55;
+    }
+
+    .text-danger-strong {
+        color: #dc2626;
+        font-weight: 600;
+    }
 </style>
 
 @section Scripts {
     <script>
-        // mở modal khi click card (và hỗ trợ Enter/Space)
-        function openAssModalFromEl(el){
+        // Mở modal từ card
+        function openAssModalFromEl(el) {
             var title   = el.dataset.title || 'Assignment';
             var type    = el.dataset.type || '—';
             var typeCls = el.dataset.typecls || 'badge-type';
             var cls     = el.dataset.class || '—';
-            var status  = el.dataset.status || '—';
+            var status  = (el.dataset.status || '—').trim();
             var due     = el.dataset.due || '—';
-            var max     = el.dataset.max || '—';
+            var maxRaw  = el.dataset.max;
+            var usedRaw = el.dataset.used;
+            var max     = parseInt(maxRaw, 10);     // NaN nếu rỗng
+            var used    = parseInt(usedRaw, 10);
+            if (isNaN(max)) max = 0;
+            if (isNaN(used)) used = 0;
+
             var desc    = el.dataset.desc || '—';
             var start   = el.dataset.startUrl || '#';
             var hist    = el.dataset.historyUrl || '#';
             var dur     = el.dataset.duration;
 
+            // Fill text
             document.getElementById('assModalTitle').innerText = title;
             document.getElementById('assModalSubTitle').innerText = 'Preview assignment details';
 
@@ -276,20 +295,126 @@
             document.getElementById('assModalStatus').innerText = status;
             document.getElementById('assModalDue').innerText = due;
             document.getElementById('assModalDuration').innerText = dur ? (dur + ' min') : '—';
-            document.getElementById('assModalMax').innerText = max || '—';
+            document.getElementById('assModalMax').innerText = max ? max : '—';
             document.getElementById('assModalDesc').innerText = (desc && desc.trim().length) ? desc : '—';
 
-            document.getElementById('assModalStartBtn').setAttribute('href', start);
+            // Buttons
+            var startBtn = document.getElementById('assModalStartBtn');
+            var hintEl   = document.getElementById('assModalHint');
+            startBtn.setAttribute('href', start);
             document.getElementById('assModalHistoryBtn').setAttribute('href', hist);
+
+            // Điều kiện cho phép Start:
+            // 1) Status phải Open
+            // 2) Chưa chạm trần attempts: max == 0 coi như không giới hạn; nếu >0 thì used < max
+            var statusOk = status.toLowerCase() === 'open';
+            var attemptsOk = (max <= 0) || (used < max);
+            var canStart = statusOk && attemptsOk;
+
+            // Cài đặt UI
+            function disableStart(reason){
+                startBtn.classList.add('btn-disabled');
+                startBtn.setAttribute('aria-disabled', 'true');
+                startBtn.setAttribute('tabindex', '-1');
+                hintEl.classList.remove('text-muted');
+                hintEl.classList.add('text-danger-strong');
+                hintEl.innerText = reason;
+                // chặn click dự phòng
+                startBtn.addEventListener('click', preventStartWhenDisabled, { once: true });
+            }
+            function enableStart(){
+                startBtn.classList.remove('btn-disabled');
+                startBtn.removeAttribute('aria-disabled');
+                startBtn.removeAttribute('tabindex');
+                hintEl.classList.remove('text-danger-strong');
+                hintEl.classList.add('text-muted');
+                // hiển thị attempts nếu có số liệu
+                if (max > 0) {
+                    hintEl.innerText = 'Attempts: ' + used + ' / ' + max + '. Review details before you start.';
+                } else {
+                    hintEl.innerText = 'Review details before you start.';
+                }
+            }
+
+            if (!statusOk) {
+                var reason = status.toLowerCase() === 'closed'
+                    ? 'This assignment is closed. You cannot start a new attempt.'
+                    : 'This assignment is not open yet.';
+                disableStart(reason);
+            } else if (!attemptsOk) {
+                disableStart('You have reached the attempt limit (' + used + ' / ' + max + ').');
+            } else {
+                enableStart();
+            }
 
             bootstrap.Modal.getOrCreateInstance(document.getElementById('assModal')).show();
         }
 
+        function preventStartWhenDisabled(e){
+            if (e.currentTarget.classList.contains('btn-disabled')) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
+
+        // Bind cards
         document.querySelectorAll('.card-click').forEach(function(card){
             card.addEventListener('click', function(){ openAssModalFromEl(this); });
             card.addEventListener('keydown', function(e){
                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAssModalFromEl(this); }
             });
+        });
+
+        // === Test History stacking (giữ nguyên) ===
+        document.addEventListener('click', async function (e) {
+          const btn = e.target.closest('#assModalHistoryBtn');
+          if (!btn) return;
+
+          e.preventDefault();
+          const url = btn.getAttribute('href');
+          if (!url || url === '#') return;
+
+          try {
+            const resp = await fetch(url, { credentials: 'same-origin' });
+            const html = await resp.text();
+
+            const old = document.getElementById('testHistoryModal');
+            if (old) old.remove();
+
+            const wrap = document.createElement('div');
+            wrap.innerHTML = html;
+            const injected = wrap.firstElementChild;
+            if (!injected) return;
+            document.body.appendChild(injected);
+
+            const openCount = document.querySelectorAll('.modal.show').length;
+            const zBase = 1050 + (10 * openCount);
+            const modalEl = document.getElementById('testHistoryModal');
+            modalEl.style.zIndex = zBase;
+
+            const m = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false, focus: false });
+            m.show();
+
+            setTimeout(() => {
+              const backs = document.querySelectorAll('.modal-backdrop');
+              const newest = backs[backs.length - 1];
+              if (newest) {
+                newest.style.zIndex = (zBase - 1).toString();
+                newest.dataset.for = 'testHistory';
+              }
+            }, 0);
+
+            modalEl.addEventListener('hidden.bs.modal', () => {
+              const bd = document.querySelector('.modal-backdrop[data-for="testHistory"]');
+              if (bd) bd.remove();
+              document.body.classList.add('modal-open');
+              const parent = document.getElementById('assModal');
+              if (parent) parent.focus();
+            }, { once: true });
+
+          } catch (err) {
+            console.error('Cannot open Test History modal:', err);
+          }
         });
     </script>
 }

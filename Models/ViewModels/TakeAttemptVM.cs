@@ -44,7 +44,7 @@ namespace POETWeb.Models.ViewModels
         public string Text { get; set; } = "";
     }
 
-    public class SaveAnswerDTO
+    public class SaveAnswerDto
     {
         public int AttemptId { get; set; }
         public int QuestionId { get; set; }

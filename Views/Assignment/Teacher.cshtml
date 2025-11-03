@@ -21,7 +21,6 @@
                 }
                 else
                 {
-
                     <text>Across your classes</text>
                 }
             </div>
@@ -103,22 +102,26 @@
                                         <a asp-controller="Assignment" asp-action="Edit"
                                            asp-route-id="@a.Id"
                                            asp-route-classId="@Model?.ClassId"
-                                           class="btn btn-outline-primary btn-sm">Edit</a>
+                                           class="btn btn-outline-primary btn-sm">
+                                            Edit
+                                        </a>
 
                                         <a asp-controller="Assignment" asp-action="Submissions"
                                            asp-route-id="@a.Id"
-                                           class="btn btn-outline-secondary btn-sm">Submissions</a>
+                                           class="btn btn-outline-secondary btn-sm">
+                                            Submissions
+                                        </a>
 
-                                        <form asp-controller="Assignment" asp-action="Delete"
-                                              asp-route-id="@a.Id"
-                                              asp-route-classId="@Model?.ClassId"
-                                              method="post" class="d-inline">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-outline-danger btn-sm"
-                                                    onclick="return confirm('Delete this assignment?');">
-                                                Delete
-                                            </button>
-                                        </form>
+                                        @* Nút Delete mở modal xác nhận (1 modal dùng chung ở cuối file) *@
+                                        <button type="button"
+                                                class="btn btn-outline-danger btn-sm"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#confirmDeleteModal"
+                                                data-assid="@a.Id"
+                                                data-classid="@Model?.ClassId"
+                                                data-title="@a.Title">
+                                            Delete
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -129,3 +132,52 @@
         }
     </div>
 </div>
+
+@* ===== Modal xác nhận xoá (dùng chung cho toàn trang) ===== *@
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Delete this assignment?</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="mb-2">Assignment: <strong id="delAssTitle">—</strong></div>
+                <p class="mb-2">This will permanently delete the assignment, its questions and choices.</p>
+                <p class="mb-0 text-danger fw-semibold">
+                    All student attempts and answers will also be deleted. This action cannot be undone.
+                </p>
+            </div>
+
+            <div class="modal-footer">
+                <form asp-controller="Assignment" asp-action="Delete" method="post" class="ms-auto">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="delAssId" />
+                    <input type="hidden" name="classId" id="delClassId" />
+                    <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Điền dữ liệu khi mở modal
+        document.getElementById('confirmDeleteModal')?.addEventListener('show.bs.modal', function (ev) {
+          const btn = ev.relatedTarget;
+          if (!btn) return;
+          const id = btn.getAttribute('data-assid');
+          const cid = btn.getAttribute('data-classid');
+          const title = btn.getAttribute('data-title') || '—';
+
+          document.getElementById('delAssId').value = id;
+          document.getElementById('delClassId').value = cid ?? '';
+          document.getElementById('delAssTitle').innerText = title;
+        });
+    </script>
+}

@@ -15,6 +15,7 @@ namespace POETWeb.Models.ViewModels
         public AssignmentType Type { get; set; }
         public string? Description { get; set; }
         public int DurationMinutes { get; set; }
+        public int AttemptsUsed { get; set; } = 0;
 
     }
 
