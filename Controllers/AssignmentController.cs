@@ -93,6 +93,93 @@ namespace POETWeb.Controllers
 
             return View(vm);
         }
+        //Test Details After
+        [Authorize(Roles = "Student")]
+        [HttpGet]
+        public async Task<IActionResult> Review(int attemptId, string? returnUrl = null)
+        {
+            var me = await _userManager.GetUserAsync(User);
+            if (me == null) return Challenge();
+
+            var t = await _db.AssignmentAttempts
+                .Include(x => x.Assignment).ThenInclude(a => a.Questions).ThenInclude(q => q.Choices)
+                .Include(x => x.Answers).ThenInclude(a => a.SelectedChoice)
+                .FirstOrDefaultAsync(x => x.Id == attemptId && x.UserId == me.Id);
+            if (t == null) return NotFound();
+
+            // Chỉ xem khi đã CLOSED
+            var now = DateTimeOffset.UtcNow;
+            var isClosed = t.Assignment.CloseAt.HasValue && t.Assignment.CloseAt.Value <= now;
+            if (!isClosed)
+            {
+                TempData["Warn"] = "Bài thi chưa đóng. Không thể xem đáp án lúc này.";
+                return RedirectToAction(nameof(History), new { id = t.AssignmentId });
+            }
+
+            var vm = new AttemptReviewVM
+            {
+                AttemptId = t.Id,
+                AssignmentId = t.AssignmentId,
+                AssignmentTitle = t.Assignment.Title ?? "Assignment",
+                OpenAt = t.Assignment.OpenAt,
+                CloseAt = t.Assignment.CloseAt,
+                IsClosed = true,
+                // Nếu đã chấm essay thì FinalScore có giá trị, còn không chỉ có AutoScore
+                Score = t.FinalScore ?? t.AutoScore ?? 0m,
+                TotalMax = t.MaxScore,
+                StartedAt = t.StartedAt,
+                SubmittedAt = t.SubmittedAt,
+                Duration = t.SubmittedAt.HasValue ? t.SubmittedAt.Value - t.StartedAt : (TimeSpan?)null
+            };
+
+            var qs = t.Assignment.Questions.OrderBy(q => q.Order).ToList();
+            for (int i = 0; i < qs.Count; i++)
+            {
+                var q = qs[i];
+                var ans = t.Answers.FirstOrDefault(a => a.QuestionId == q.Id);
+
+                var item = new QuestionReviewItem
+                {
+                    Index = i + 1,
+                    Type = q.Type,
+                    Prompt = q.Prompt,
+                    Points = q.Points
+                };
+
+                if (q.Type == POETWeb.Models.Enums.QuestionType.Mcq)
+                {
+                    var correct = q.Choices.FirstOrDefault(c => c.IsCorrect)?.Id;
+                    var chosen = ans?.SelectedChoiceId;
+
+                    item.ChosenChoiceId = chosen;
+                    item.CorrectChoiceId = correct;
+                    item.Choices = q.Choices
+                        .OrderBy(c => c.Order)
+                        .Select(c => new McqChoiceVM
+                        {
+                            ChoiceId = c.Id,
+                            Text = c.Text,
+                            IsChosen = chosen.HasValue && chosen.Value == c.Id,
+                            IsCorrect = correct.HasValue && correct.Value == c.Id
+                        })
+                        .ToList();
+                }
+                else
+                {
+                    item.EssayText = ans?.TextAnswer;
+                    item.EssayScore = ans?.PointsAwarded;      // điểm chấm tay
+                    item.TeacherComment = ans?.TeacherComment; // nhận xét câu
+                }
+
+                vm.Questions.Add(item);
+            }
+
+            ViewBag.ReturnUrl = string.IsNullOrWhiteSpace(returnUrl)
+            ? Url.Action("Student", "Assignment")
+            : returnUrl;
+            return View(vm);
+        }
+
         // FUNCTIONs OF TEACHER
         // TEACHER: danh sách
         [Authorize(Roles = "Teacher")]
@@ -602,7 +689,7 @@ namespace POETWeb.Controllers
                     if (ans != null)
                     {
                         var isRight = ans.SelectedChoiceId != null && correctChoiceId == ans.SelectedChoiceId;
-                        ans.IsCorrect = isRight; // đánh dấu để History đếm chuẩn
+                        ans.IsCorrect = isRight;
                         if (isRight) auto += q.Points;
                     }
                 }
@@ -627,7 +714,7 @@ namespace POETWeb.Controllers
             var assignment = await _db.Assignments
                 .AsNoTracking()
                 .Where(a => a.Id == id)
-                .Select(a => new { a.Id, a.Title, a.MaxAttempts })
+                .Select(a => new { a.Id, a.Title, a.MaxAttempts, a.CloseAt })
                 .FirstOrDefaultAsync();
 
             if (assignment == null) return NotFound();
@@ -740,6 +827,9 @@ namespace POETWeb.Controllers
                 Attempts = list,
                 MaxAttempts = assignment.MaxAttempts
             };
+
+            var now = DateTimeOffset.UtcNow;
+            ViewBag.IsClosed = assignment.CloseAt.HasValue && assignment.CloseAt.Value <= now;
 
             return PartialView("_TestHistoryModal", vm);
         }
@@ -1297,9 +1387,6 @@ namespace POETWeb.Controllers
                         $"Total points must equal {vm.TotalPointsMax}. Current total: {total:0.##}.");
             }
         }
-
-
-
 
         private async Task EnsureTeacherOwnsClassAsync(int classId)
         {

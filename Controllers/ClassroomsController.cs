@@ -196,25 +196,28 @@ namespace POETWeb.Controllers
             return PartialView("_DetailsModal", cls);
         }
 
+
+        [Authorize(Roles = "Teacher")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Teacher")]
-        public async Task<IActionResult> Kick([FromBody] KickDto dto)
+        public async Task<IActionResult> Kick([FromForm] int classId, [FromForm] string userId)
         {
             var me = await _userManager.GetUserAsync(User);
-            var cls = await _db.Classrooms.FirstOrDefaultAsync(c => c.Id == dto.ClassId && c.TeacherId == me!.Id);
-            if (cls == null) return Forbid();
+            var cls = await _db.Classrooms
+                .FirstOrDefaultAsync(c => c.Id == classId && c.TeacherId == me.Id);
+            if (cls == null) return Json(new { ok = false, error = "NotAllowed" });
 
-            var enr = await _db.Enrollments.FirstOrDefaultAsync(e => e.ClassId == dto.ClassId && e.UserId == dto.UserId);
-            if (enr == null) return NotFound(new { ok = false, message = "Student not enrolled." });
-
-            if (!string.Equals(enr.RoleInClass, "Student", StringComparison.OrdinalIgnoreCase))
-                return BadRequest(new { ok = false, message = "Cannot remove non-student member." });
+            var enr = await _db.Enrollments
+                .FirstOrDefaultAsync(e => e.ClassId == classId && e.UserId == userId && e.RoleInClass == "Student");
+            if (enr == null) return Json(new { ok = false, error = "NotFound" });
 
             _db.Enrollments.Remove(enr);
             await _db.SaveChangesAsync();
+
             return Json(new { ok = true });
         }
+
+
 
         public sealed class KickDto { public int ClassId { get; set; } public string UserId { get; set; } = ""; }
 
@@ -309,8 +312,6 @@ namespace POETWeb.Controllers
             ViewBag.ClassCode = cls.ClassCode;
             return View(list);
         }
-
-
 
         // helper
         private async Task EnsureOwnerAsync(string teacherId)

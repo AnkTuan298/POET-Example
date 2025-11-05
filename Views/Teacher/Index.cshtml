@@ -235,7 +235,18 @@
                     {
                         <li class="tdash-activity">
                             <div class="tdash-activity__text">
-                                <strong>@r.StudentName</strong> joined <strong>@r.ClassTitle</strong>
+                                @if (r.Kind == ActivityKind.JoinedClass)
+                                {
+                                    <text>
+                                        <strong>@r.StudentName</strong> joined <strong>@r.ClassTitle</strong>
+                                    </text>
+                                }
+                                else
+                                {
+                                    <text>
+                                        <strong>@r.StudentName</strong> submitted <strong>@(r.AssignmentTitle ?? "an assignment")</strong> in <strong>@r.ClassTitle</strong>
+                                    </text>
+                                }
                             </div>
                             <div class="tdash-activity__time">@r.TimeAgo</div>
                         </li>

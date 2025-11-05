@@ -1,0 +1,27 @@
+﻿@model IEnumerable<POETWeb.Models.Domain.Material>
+@{
+    ViewData["Title"] = "Class Materials";
+}
+<h4>Materials of @ViewBag.ClassName</h4>
+<table class="table table-sm">
+    <thead><tr><th>Title</th><th>Kind</th><th>Created</th><th style="width:1%"></th></tr></thead>
+    <tbody>
+        @foreach (var m in Model)
+        {
+            <tr>
+                <td>@m.Title</td>
+                <td>@(m.Category ?? m.Provider ?? m.MediaKind)</td>
+                <td>@m.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                <td class="text-end">
+                    <form asp-action="DeleteMaterial" method="post" class="d-inline" onsubmit="return confirm('Delete material?');">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@m.Id" />
+                        <input type="hidden" name="classId" value="@ViewBag.ClassId" />
+                        <button class="btn btn-outline-danger btn-sm">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+<a class="btn btn-soft" asp-action="Classes">Back</a>

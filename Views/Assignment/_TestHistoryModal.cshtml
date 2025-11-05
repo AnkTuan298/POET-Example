@@ -1,5 +1,9 @@
 ﻿@model POETWeb.Models.ViewModels.TestHistoryVM
 
+@{
+    var isClosed = (bool)(ViewBag.IsClosed ?? false);
+}
+
 <div class="modal fade modal-history" id="testHistoryModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1000px;">
         <div class="modal-content shadow-lg border-0 rounded-4 overflow-hidden">
@@ -133,7 +137,22 @@
                                         </td>
 
                                         <td class="text-end" style="white-space:nowrap;">
-                                            <a asp-action="Review" asp-route-attemptId="@a.AttemptId" class="btn btn-sm btn-outline-primary">View</a>
+                                            @if (isClosed)
+                                            {
+                                                <a asp-action="Review"
+                                                   asp-route-attemptId="@a.AttemptId"
+                                                   asp-route-returnUrl="@Context.Request.Path + Context.Request.QueryString"
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    View
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-sm btn-outline-primary" type="button" disabled
+                                                        title="Available after the assignment is closed" aria-disabled="true">
+                                                    View
+                                                </button>
+                                            }
                                         </td>
                                     </tr>
                                 }

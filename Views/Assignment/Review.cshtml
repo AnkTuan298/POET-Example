@@ -1,0 +1,239 @@
+﻿@model POETWeb.Models.ViewModels.AttemptReviewVM
+@using POETWeb.Models.Enums
+@{
+    ViewData["Title"] = "Review • " + Model.AssignmentTitle;
+}
+
+<div class="header-gradient mb-0">
+    <div class="container-xxl d-flex align-items-center justify-content-between py-3">
+        <div>
+            <div class="small opacity-75">Assignment review</div>
+            <h4 class="mb-0">@Model.AssignmentTitle</h4>
+        </div>
+        @{
+            var backUrl = (string)(ViewBag.ReturnUrl ?? Url.Action("Student", "Assignment"));
+        }
+        <a href="@backUrl" class="btn btn-light btn-sm">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="container-xxl py-3">
+    @if (TempData["Warn"] != null)
+    {
+        <div class="alert alert-warning">@TempData["Warn"]</div>
+    }
+
+    <div class="row g-4">
+        <div class="col-12 col-xl-4">
+            <div class="card border-0 shadow-sm sticky-top" style="top:90px">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="fw-semibold">Summary</div>
+                        <span class="badge bg-dark-subtle text-dark">Closed</span>
+                    </div>
+
+                    <div class="mb-2">
+                        <span class="text-muted small">Score</span>
+                        <div class="fs-4 fw-bold">@Model.Score.ToString("0.##") / @Model.TotalMax.ToString("0.##")</div>
+                        <div class="progress" style="height:8px">
+                            @{
+                                var pct = Model.TotalMax > 0 ? Math.Clamp((double)(Model.Score / Model.TotalMax) * 100d, 0d, 100d) : 0d;
+                            }
+                            <div class="progress-bar bg-summary" style="width:@pct%"></div>
+                        </div>
+                    </div>
+
+                    <div class="small text-muted">
+                        <div>Opened: @Model.OpenAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                        <div>Closed: @Model.CloseAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                        <div>Started: @Model.StartedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                        <div>Submitted: @Model.SubmittedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                        @if (Model.Duration.HasValue)
+                        {
+                            <div>Duration: @($"{(int)Model.Duration.Value.TotalMinutes} min")</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-8">
+            @for (int i = 0; i < Model.Questions.Count; i++)
+            {
+                var q = Model.Questions[i];
+                var isMcq = q.Type == QuestionType.Mcq;
+                var got = isMcq
+                ? ((q.ChosenChoiceId.HasValue && q.CorrectChoiceId.HasValue && q.ChosenChoiceId == q.CorrectChoiceId) ? q.Points : 0m)
+                : (q.EssayScore ?? 0m);
+
+                <div class="qcard mb-3">
+                    <div class="qcard-head">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="qchip">@((isMcq ? "MCQ" : "Essay"))</span>
+                            <strong>Question @q.Index</strong>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-1 text-muted small">
+                                <i class="bi bi-star"></i>
+                                <span>@q.Points.ToString("0.##")</span> pts
+                            </div>
+                            <span class="badge @(got >= q.Points * 0.999m ? "bg-success" : (got > 0 ? "bg-warning text-dark" : "bg-danger"))">
+                                @got.ToString("0.##") / @q.Points.ToString("0.##")
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="qcard-body">
+                        <div class="mb-2 fw-semibold">@q.Prompt</div>
+
+                        @if (isMcq)
+                        {
+                            <div class="row g-2">
+                                @foreach (var c in q.Choices!)
+                                {
+                                    var state =
+                                    c.IsCorrect && c.IsChosen ? "choice correct chosen"
+                                    : c.IsCorrect ? "choice correct"
+                                    : c.IsChosen ? "choice chosen"
+                                    : "choice";
+
+                                    <div class="col-12 col-md-6">
+                                        <div class="@state">
+                                            <div class="choice-dot" aria-hidden="true"></div>
+                                            <div class="flex-grow-1">@c.Text</div>
+                                            @if (c.IsCorrect)
+                                            {
+                                                <span class="badge bg-success-subtle text-success">Correct</span>
+                                            }
+                                            @if (c.IsChosen && !c.IsCorrect)
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger">Your choice</span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="essay-box">
+                                <div class="small text-muted mb-1">Your answer</div>
+                                <div class="essay-content">@Html.Raw(string.IsNullOrWhiteSpace(q.EssayText) ? "<i>No answer</i>" : Html.Encode(q.EssayText))</div>
+                            </div>
+
+                            <div class="mt-3">
+                                <div class="small text-muted mb-1">Teacher grading</div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-dark-subtle text-dark">Score: @(q.EssayScore?.ToString("0.##") ?? "—") / @q.Points.ToString("0.##")</span>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(q.TeacherComment))
+                                {
+                                    <div class="teacher-comment mt-2">
+                                        <i class="bi bi-chat-quote"></i>
+                                        <div>@q.TeacherComment</div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .header-gradient {
+        background: linear-gradient(90deg,#6366f1,#22d3ee);
+        color: #fff
+    }
+
+    .bg-summary {
+        background: linear-gradient(90deg,#34d399,#10b981)
+    }
+
+    .qcard {
+        border: 1px solid #ececec;
+        border-radius: 12px;
+        overflow: hidden
+    }
+
+    .qcard-head {
+        background: linear-gradient(90deg,#eef2ff,#f8fafc);
+        padding: .65rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between
+    }
+
+    .qcard-body {
+        padding: 1rem
+    }
+
+    .qchip {
+        background: #e0f2fe;
+        color: #0369a1;
+        font-weight: 600;
+        border-radius: 999px;
+        padding: .1rem .5rem;
+        font-size: .75rem
+    }
+
+    .choice {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: .5rem .75rem;
+        background: #fff
+    }
+
+        .choice .choice-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #cfd8e3
+        }
+
+        .choice.chosen {
+            border-color: #fca5a5;
+            background: #fff7f7
+        }
+
+        .choice.correct {
+            border-color: #86efac;
+            background: #f0fff4
+        }
+
+            .choice.correct .choice-dot {
+                background: #34d399
+            }
+
+        .choice.chosen .choice-dot {
+            background: #ef4444
+        }
+
+    .essay-box {
+        border: 1px dashed #cbd5e1;
+        border-radius: 10px;
+        padding: .75rem;
+        background: #fcfdff
+    }
+
+    .essay-content {
+        white-space: pre-wrap
+    }
+
+    .teacher-comment {
+        display: flex;
+        align-items: flex-start;
+        gap: .5rem;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: .5rem .75rem
+    }
+</style>

@@ -220,6 +220,15 @@
                             </div>
                         }
                     </div>
+                    <div class="mt-3">
+                        <button type="submit"
+                                class="btn btn-soft"
+                                formnovalidate
+                                data-anchor="__NEW_Q__"
+                                onclick="return opAddQ()">
+                            + Add question
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Right: summary -->
@@ -423,22 +432,64 @@ Points: 15</pre>
             });},{once:true});
 
             /* Scroll restore */
-            (function(){
-              const KEY_POS='ass-create-scrollY', KEY_ANCHOR='ass-create-anchor';
-              document.querySelectorAll('#assForm button[type="submit"]').forEach(btn=>{
-                btn.addEventListener('click',()=>{
-                  const a=btn.getAttribute('data-anchor')||'';
-                  if(a) sessionStorage.setItem(KEY_ANCHOR,a);
-                  else  sessionStorage.setItem(KEY_POS,String(window.scrollY||0));
-                },{passive:true});
-              });
-              window.addEventListener('DOMContentLoaded',()=>{
-                const a=sessionStorage.getItem(KEY_ANCHOR);
-                if(a){ const el=document.querySelector(a); if(el) el.scrollIntoView({behavior:'auto',block:'start'}); sessionStorage.removeItem(KEY_ANCHOR); return; }
-                const y=parseInt(sessionStorage.getItem(KEY_POS)||'0',10); if(!isNaN(y)&&y>0) window.scrollTo(0,y);
-                sessionStorage.removeItem(KEY_POS);
-              },{once:true});
-            })();
+                  (function(){
+          const KEY_POS='ass-create-scrollY';
+          const KEY_ANCHOR='ass-create-anchor';
+          const NEW_SENTINEL='__NEW_Q__';
+
+          // Lưu vị trí/anchor trước khi submit
+          document.querySelectorAll('#assForm button[type="submit"]').forEach(btn=>{
+            btn.addEventListener('click',()=>{
+              const a=btn.getAttribute('data-anchor')||'';
+              if(a) sessionStorage.setItem(KEY_ANCHOR,a);
+              else  sessionStorage.setItem(KEY_POS,String(window.scrollY||0));
+            },{passive:true});
+          });
+
+          // Khôi phục sau khi render lại
+          window.addEventListener('DOMContentLoaded',()=>{
+            const a=sessionStorage.getItem(KEY_ANCHOR);
+
+            // Trường hợp "vừa thêm câu hỏi": cuộn tới qcard cuối cùng
+            if(a===NEW_SENTINEL){
+              const cards=document.querySelectorAll('#questions .qcard');
+              const last=cards[cards.length-1];
+              if(last){
+                // Mở accordion nếu đang đóng
+                const body=last.querySelector('.collapse');
+                if(body && !body.classList.contains('show')) body.classList.add('show');
+
+                // Cuộn vào vị trí qcard mới
+                last.scrollIntoView({behavior:'auto', block:'start'});
+
+                // Tô sáng nhẹ 1 tẹo cho dễ thấy (tự tắt)
+                last.style.boxShadow='0 0 0 3px rgba(99,102,241,.35)';
+                setTimeout(()=>{ last.style.boxShadow=''; }, 900);
+
+                // Focus vào Prompt cho tiện gõ
+                const prompt=last.querySelector('textarea[name*=".Prompt"]');
+                if(prompt) prompt.focus();
+              }
+              sessionStorage.removeItem(KEY_ANCHOR);
+              sessionStorage.removeItem(KEY_POS);
+              return;
+            }
+
+            // Trường hợp còn lại: anchor selector bình thường
+            if(a){
+              const el=document.querySelector(a);
+              if(el) el.scrollIntoView({behavior:'auto', block:'start'});
+              sessionStorage.removeItem(KEY_ANCHOR);
+              sessionStorage.removeItem(KEY_POS);
+              return;
+            }
+
+            // Không có anchor: khôi phục Y cũ
+            const y=parseInt(sessionStorage.getItem(KEY_POS)||'0',10);
+            if(!isNaN(y)&&y>0) window.scrollTo(0,y);
+            sessionStorage.removeItem(KEY_POS);
+          },{once:true});
+        })();
 
             /* Command helpers */
             function setOp(op,qIndex,choiceIndex){document.getElementById('Op').value=op;

@@ -5,6 +5,7 @@
     var classCode = (string)(ViewBag.ClassCode ?? "");
     var classId = (int)(ViewBag.ClassId ?? 0);
 }
+<script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
 
 <!-- Header -->
 <div class="rs-header">
@@ -119,8 +120,12 @@
                                 <td><span class="@roleCls">@role</span></td>
                                 <td class="text-muted">@joined.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                                 <td class="text-end">
-                                    <button class="btn btn-outline-danger btn-sm"
-                                            data-kick='@System.Text.Encodings.Web.HtmlEncoder.Default.Encode(Newtonsoft.Json.JsonConvert.SerializeObject(new { userId = (string)s.Id, fullName }))'>
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-sm"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#kickModal"
+                                            data-userid="@Convert.ToString(s.Id)"
+                                            data-fullname="@fullName">
                                         <i class="bi bi-person-dash"></i> Kick
                                     </button>
                                 </td>
@@ -147,13 +152,14 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-soft-slate" data-bs-dismiss="modal">Cancel</button>
-                <button id="kickConfirmBtn" class="btn btn-danger">
+                <button id="kickConfirmBtn" type="button" class="btn btn-danger">
                     <i class="bi bi-check2-circle"></i> Remove
                 </button>
             </div>
         </div>
     </div>
 </div>
+
 
 <style>
     /* Header */
@@ -286,86 +292,110 @@
 </style>
 
 @section Scripts {
-    <script>
-        (function(){
-          const q = document.getElementById('q');
-          const rows = Array.from(document.querySelectorAll('#rosterTable tbody tr'));
-          const total = document.getElementById('totalCount');
-          const classId = @classId;
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const classId = @classId;
 
-          function filter(){
-            const term = (q?.value || '').trim().toLowerCase();
-            let visible=0;
-            rows.forEach(r=>{
-              const n = r.getAttribute('data-name')||'';
-              const e = r.getAttribute('data-email')||'';
-              const u = r.getAttribute('data-username')||'';
-              const show = !term || n.includes(term) || e.includes(term) || u.includes(term);
-              r.style.display = show ? '' : 'none';
-              if (show) visible++;
-            });
-            if (total) total.textContent = String(visible);
-          }
-          q?.addEventListener('input', filter, {passive:true});
+      // ===== filter + copy (giữ logic như cũ, chỉ gom gọn) =====
+      const q = document.getElementById('q');
+      const total = document.getElementById('totalCount');
+      const tbody = document.querySelector('#rosterTable tbody');
+      const rows = () => Array.from(tbody?.querySelectorAll('tr') || []);
 
-          // Copy visible emails
-          document.getElementById('btnCopyEmails')?.addEventListener('click', async ()=>{
-            const emails = rows.filter(r=>r.style.display!=='none')
-              .map(r=>r.getAttribute('data-email')||'').filter(Boolean);
-            try{
-              await navigator.clipboard.writeText(emails.join(', '));
-              const btn = document.getElementById('btnCopyEmails'); const old = btn.innerHTML;
-              btn.innerHTML = '<i class="bi bi-clipboard-check-fill"></i> Copied!';
-              setTimeout(()=> btn.innerHTML = old, 1200);
-            }catch{ alert('Cannot copy to clipboard.'); }
+      function filter() {
+        const term = (q?.value || '').trim().toLowerCase();
+        let visible = 0;
+        rows().forEach(r => {
+          const n = r.getAttribute('data-name') || '';
+          const e = r.getAttribute('data-email') || '';
+          const u = r.getAttribute('data-username') || '';
+          const show = !term || n.includes(term) || e.includes(term) || u.includes(term);
+          r.style.display = show ? '' : 'none';
+          if (show) visible++;
+        });
+        if (total) total.textContent = String(visible);
+      }
+      q?.addEventListener('input', filter, { passive: true });
+      document.getElementById('btnCopyEmails')?.addEventListener('click', async () => {
+        const list = rows().filter(r => r.style.display !== 'none')
+                           .map(r => r.getAttribute('data-email') || '')
+                           .filter(Boolean);
+        try {
+          await navigator.clipboard.writeText(list.join(', '));
+          const btn = document.getElementById('btnCopyEmails'); const old = btn.innerHTML;
+          btn.innerHTML = '<i class="bi bi-clipboard-check-fill"></i> Copied!';
+          setTimeout(() => btn.innerHTML = old, 1200);
+        } catch { alert('Cannot copy to clipboard.'); }
+      });
+
+      // ===== Kick flow via Bootstrap data-API =====
+      let currentUserId = null;
+
+      const modalEl = document.getElementById('kickModal');
+      const nameEl  = document.getElementById('kickName');
+      const btnOk   = document.getElementById('kickConfirmBtn');
+
+      // Khi modal sắp mở, Bootstrap truyền nút đã bấm qua event.relatedTarget
+      modalEl?.addEventListener('show.bs.modal', function (ev) {
+        const trigger = ev.relatedTarget; // chính là nút Kick
+        if (!trigger) return;
+        currentUserId = trigger.getAttribute('data-userid');
+        const fullName = trigger.getAttribute('data-fullname') || 'this student';
+        if (nameEl) nameEl.textContent = fullName;
+      });
+
+      function getToken() {
+        const input = document.querySelector('#kickForm input[name="__RequestVerificationToken"]');
+        return input?.value || '';
+      }
+
+      btnOk?.addEventListener('click', async function () {
+        if (!currentUserId) return;
+
+        const fd = new FormData();
+        fd.append('classId', String(classId));
+        fd.append('userId', currentUserId);
+        fd.append('__RequestVerificationToken', getToken());
+
+        try {
+          const resp = await fetch('@Url.Action("Kick","Classrooms")', {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          });
+          if (!resp.ok) throw new Error('Kick failed');
+          const json = await resp.json();
+          if (!json?.ok) throw new Error(json?.error || 'Kick failed');
+
+          // Xóa hàng có userId tương ứng
+          const row = rows().find(tr =>
+            (tr.querySelector('[data-userid]')?.getAttribute('data-userid') ||
+             tr.querySelector('[data-kick]')?.getAttribute('data-kick') || '')
+              .includes(currentUserId)
+          ) || rows().find(tr => {
+            // fallback: so khớp bằng username/email nếu cần… nhưng thôi, đủ rồi
+            return false;
           });
 
-          // Kick flow
-          let kickTarget = null;
-          const kickModalEl = document.getElementById('kickModal');
-          const kickModal = bootstrap.Modal.getOrCreateInstance(kickModalEl);
-          const kickNameEl = document.getElementById('kickName');
-          const kickBtn = document.getElementById('kickConfirmBtn');
+          if (row) row.remove();
 
-          document.addEventListener('click', (e)=>{
-            const btn = e.target.closest('[data-kick]');
-            if(!btn) return;
-            const payload = JSON.parse(btn.getAttribute('data-kick')||'{}');
-            kickTarget = payload;
-            kickNameEl.textContent = payload.fullName || 'this student';
-            kickModal.show();
-          });
+          // Đóng modal (Bootstrap tự lo via data-API)
+          const m = bootstrap?.Modal.getInstance(modalEl);
+          m?.hide();
 
-          function getAntiForgery(){
-            const form = document.getElementById('kickForm');
-            const input = form.querySelector('input[name="__RequestVerificationToken"]');
-            return input?.value || '';
-          }
+          filter();
+        } catch (err) {
+          console.error(err);
+          alert('Cannot remove student.');
+        }
+      });
 
-          kickBtn.addEventListener('click', async ()=>{
-            if(!kickTarget || !kickTarget.userId) return;
-            try{
-              const resp = await fetch('@Url.Action("Kick", "Classrooms")', {
-                method:'POST',
-                headers: {
-                  'Content-Type':'application/json',
-                  'RequestVerificationToken': getAntiForgery()
-                },
-                body: JSON.stringify({ classId: classId, userId: kickTarget.userId }),
-                credentials:'same-origin'
-              });
-              if(!resp.ok){ throw new Error('Kick failed'); }
-              const ok = (await resp.json())?.ok;
-              if(!ok) throw new Error('Kick failed');
-              const row = Array.from(document.querySelectorAll('#rosterTable tbody tr'))
-                .find(tr => (tr.querySelector('[data-kick]')?.getAttribute('data-kick')||'').includes(kickTarget.userId));
-              if(row){ row.remove(); filter(); }
-              kickModal.hide();
-            }catch(err){
-              console.error(err);
-              alert('Cannot remove student.');
-            }
-          });
-        })();
-    </script>
+      // init
+      filter();
+    });
+  </script>
 }
+
+
+

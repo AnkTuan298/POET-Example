@@ -1,0 +1,139 @@
+﻿@model IEnumerable<POETWeb.Controllers.AdminController.UserRow>
+@{
+    ViewData["Title"] = "Manage Accounts";
+    var q = (string)(ViewBag.Query ?? "");
+    int total = (int)(ViewBag.Total ?? 0);
+    int page = (int)(ViewBag.Page ?? 1);
+    int pageSize = (int)(ViewBag.PageSize ?? 20);
+    int totalPages = (int)Math.Ceiling(total / (double)pageSize);
+}
+
+<!-- Header -->
+<nav class="adminbar shadow-sm">
+    <div class="container-xxl d-flex align-items-center justify-content-between">
+        <div class="py-2">
+            <div class="small opacity-75">Administration</div>
+            <h4 class="mb-0">Manage Accounts</h4>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Index" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="container-xxl py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h5 class="m-0">Accounts <span class="text-muted">(@total)</span></h5>
+
+        <form method="get" class="d-flex gap-2">
+            <input name="q" value="@q" class="form-control form-control-sm" style="min-width:260px" placeholder="Search name/username/email..." />
+            <button type="submit" class="btn btn-primary btn-sm">Search</button>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>User</th>
+                    <th>Email</th>
+                    <th>Roles</th>
+                    <th>Account</th>
+                    <th style="width:1%"></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var u in Model)
+            {
+                <tr>
+                    <td>
+                        <strong>@(string.IsNullOrWhiteSpace(u.FullName) ? u.UserName : u.FullName)</strong><br />
+                        <small class="text-muted">@u.UserName</small>
+                    </td>
+                    <td>@u.Email</td>
+                    <td>@u.RolesCsv</td>
+                    <td><code>@u.AccountCode</code></td>
+                        <td class="text-end">
+                            @if (!u.IsAdmin)
+                            {
+                                if (u.IsTeacher)
+                                {
+                                    <!-- Đang là Teacher => nút giáng cấp -->
+                                    <form asp-action="DemoteToStudent" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="userId" value="@u.Id" />
+                                        <button class="btn btn-outline-warning btn-sm" type="submit" title="Set ONLY Student role">
+                                            Demote → Student
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <!-- Không phải Teacher => nút thăng cấp -->
+                                    <form asp-action="PromoteToTeacher" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="userId" value="@u.Id" />
+                                        <button class="btn btn-outline-primary btn-sm" type="submit" title="Set ONLY Teacher role">
+                                            Promote → Teacher
+                                        </button>
+                                    </form>
+                                }
+
+                                <!-- Delete vẫn giữ, chặn tự xóa bản thân ở controller nếu muốn -->
+                                <form asp-action="DeleteUser" method="post" class="d-inline" onsubmit="return confirm('Delete this user?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="userId" value="@u.Id" />
+                                    <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Admin</span>
+                            }
+                        </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pager -->
+    @if (totalPages > 1)
+    {
+        <nav class="d-flex justify-content-between align-items-center mt-2">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(page <= 1 ? "disabled" : "")">
+                    <a class="page-link" asp-action="Users" asp-route-q="@q" asp-route-page="@(page-1)" asp-route-pageSize="@pageSize">Prev</a>
+                </li>
+                @for (int i = Math.Max(1, page-2); i <= Math.Min(totalPages, page+2); i++)
+                {
+                    <li class="page-item @(i == page ? "active" : "")">
+                        <a class="page-link" asp-action="Users" asp-route-q="@q" asp-route-page="@i" asp-route-pageSize="@pageSize">@i</a>
+                    </li>
+                }
+                <li class="page-item @(page >= totalPages ? "disabled" : "")">
+                    <a class="page-link" asp-action="Users" asp-route-q="@q" asp-route-page="@(page+1)" asp-route-pageSize="@pageSize">Next</a>
+                </li>
+            </ul>
+        </nav>
+    }
+</div>
+
+@section Styles {
+    <style>
+        .adminbar{
+            background:linear-gradient(90deg,#0ea5e9,#6366f1);
+            color:#fff
+        }
+        .adminbar .btn{
+            border-color:rgba(255,255,255,.7);
+            color:#fff
+        }
+        .adminbar .btn:hover{ background:rgba(255,255,255,.12); color:#fff }
+        .table thead th{ font-weight:700 }
+        .btn-primary{ background:#2563eb; border-color:#2563eb }
+        .btn-primary:hover{ filter:brightness(.95) }
+    </style>
+}

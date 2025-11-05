@@ -21,7 +21,6 @@ namespace POETWeb.Models.ViewModels
 
         public List<CreateQuestionVM> Questions { get; set; } = new();
 
-        // postback ops (add/remove)
         public string? Op { get; set; }
         public int? QIndex { get; set; }
         public int? ChoiceIndex { get; set; }

@@ -15,23 +15,17 @@
 
     string homeController = "Student";
     string homeAction = "Index";
-    string displayName = "User";
+    var displayName = User?.Identity?.Name ?? "User";
     string avatarUrl = Url.Content("~/images/avatar-default.png");
 
     if (SignInManager.IsSignedIn(User))
     {
         var me = await UserManager.GetUserAsync(User);
+        var raw = me?.AvatarUrl;
+        if (!string.IsNullOrWhiteSpace(raw))
+            avatarUrl = Url.Content(raw);
         if (me != null)
         {
-            // Prefer last name only
-            var rawName = !string.IsNullOrWhiteSpace(me.FullName) ? me.FullName! : (me.UserName ?? "User");
-            var parts = rawName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            displayName = parts.Length > 0 ? parts[^1] : rawName;
-
-            if (!string.IsNullOrWhiteSpace(me.AvatarUrl))
-                avatarUrl = Url.Content(me.AvatarUrl);
-
-            // Role-based home
             var isTeacher = await UserManager.IsInRoleAsync(me, "Teacher");
             homeController = isTeacher ? "Teacher" : "Student";
         }
@@ -40,24 +34,20 @@
 
 <nav class="navbar navbar-expand-lg lp-nav bg-white shadow-sm sticky-top py-3">
     <div class="container-xxl px-4">
-        <!-- Brand -->
         <a class="navbar-brand d-inline-flex align-items-center"
            asp-controller="@homeController" asp-action="@homeAction" aria-label="POET Home">
             <img src="@Url.Content("~/LOGO/POETLOGO.png")"
                  alt="POET" class="brand-logo" />
         </a>
 
-        <!-- Toggler -->
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                 data-bs-target="#accountNav" aria-controls="accountNav"
                 aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <!-- Collapse -->
         <div class="collapse navbar-collapse" id="accountNav">
             <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
-                <!-- Explicit Home button to match brand route -->
                 <li class="nav-item">
                     <a class="btn btn-soft-slate btn-sm"
                        asp-controller="@homeController" asp-action="@homeAction">
@@ -65,22 +55,19 @@
                     </a>
                 </li>
 
-                <!-- User menu -->
-                <li class="nav-item">
-                    <div class="user-menu ms-lg-2">
-                        <button class="user-trigger user-trigger--pill" id="userTrigger"
+                    <div class="user-menu ms-3">
+                        <button class="user-trigger user-trigger--elevated"
+                                id="userTrigger"
                                 type="button" aria-haspopup="true" aria-expanded="false"
                                 aria-controls="userPanel">
-                            <span class="user-pill">
-                                <img src="@avatarUrl"
-                                     alt="Avatar"
-                                     class="avatar-round"
-                                     onerror="this.onerror=null;this.src='@Url.Content("~/images/avatar-default.png")';" />
-                                <span class="user-name">@displayName</span>
-                                <svg class="chev" width="14" height="14" viewBox="0 0 20 20" aria-hidden="true">
-                                    <path d="M5 7l5 6 5-6z" fill="currentColor" />
-                                </svg>
-                            </span>
+                            <img src="@avatarUrl"
+                                 alt="Avatar"
+                                 class="avatar-sm me-2"
+                                 onerror="this.onerror=null;this.src='@Url.Content("~/images/avatar-default.png")';" />
+                            <span>@displayName</span>
+                            <svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true">
+                                <path d="M5 7l5 6 5-6z" fill="currentColor" />
+                            </svg>
                         </button>
 
                         <div class="user-panel" id="userPanel" role="menu" aria-label="Account menu" hidden>
@@ -95,7 +82,6 @@
                             </form>
                         </div>
                     </div>
-                </li>
             </ul>
         </div>
     </div>
@@ -161,22 +147,7 @@
     </script>
 
     <style>
-        /* Brand logo heights for consistency */
-        .brand-logo {
-            height: 52px;
-            width: auto;
-            display: block;
-        }
-        @@media (min-width: 768px) {
-            .brand-logo
-
-        {
-            height: 36px;
-        }
-
-        }
-
-        /* Soft button reused */
+        /* Soft button */
         .btn-soft-slate {
             background: #f3f4f6;
             border: 1px solid #e5e7eb;
@@ -188,29 +159,12 @@
                 color: #111827;
             }
 
-        /* User menu (pill style, identical to teacher/student header) */
+        /* ===== Styles khớp bản Teacher ===== */
         .user-menu {
             position: relative;
         }
 
-        .user-trigger--pill {
-            background: transparent;
-            border: 0;
-            padding: 0;
-        }
-
-        .user-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: .5rem;
-            padding: .25rem .75rem;
-            border: 1px solid #e5e7eb;
-            border-radius: 9999px;
-            box-shadow: 0 6px 18px rgba(99,102,241,.12);
-            background: #fff;
-        }
-
-        .avatar-round {
+        .avatar-sm {
             width: 32px;
             height: 32px;
             border-radius: 9999px;
@@ -218,17 +172,6 @@
             background: #f3f4f6;
             border: 2px solid #fff;
             box-shadow: 0 0 0 2px #e5e7eb inset;
-        }
-
-        .user-name {
-            max-width: 14rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .user-menu .chev {
-            opacity: .8;
         }
 
         .user-panel {

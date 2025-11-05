@@ -1,0 +1,40 @@
+﻿@model IEnumerable<dynamic>
+@{
+    ViewData["Title"] = "Class Assignments";
+}
+<h4>Assignments of @ViewBag.ClassName</h4>
+
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Max</th>
+            <th>Open</th>
+            <th>Due</th>
+            <th>Attempts</th>
+            <th style="width:1%"></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var a in Model)
+        {
+            <tr>
+                <td>@a.Title</td>
+                <td>@a.TotalMax</td>
+                <td>@(a.OpenAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                <td>@(a.CloseAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                <td>@a.MaxAttempts</td>
+                <td class="text-end">
+                    <form asp-action="DeleteAssignment" method="post" class="d-inline" onsubmit="return confirm('Delete assignment?');">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@a.Id" />
+                        <input type="hidden" name="classId" value="@ViewBag.ClassId" />
+                        <button class="btn btn-outline-danger btn-sm">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a class="btn btn-soft" asp-action="Classes">Back</a>

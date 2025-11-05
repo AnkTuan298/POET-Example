@@ -1,0 +1,28 @@
+﻿@model IEnumerable<dynamic>
+@{
+    ViewData["Title"] = "Class Students";
+}
+<h4>Students of @ViewBag.ClassName</h4>
+<table class="table table-sm">
+    <thead><tr><th>Name</th><th>User</th><th>Email</th><th>Joined</th><th style="width:1%"></th></tr></thead>
+    <tbody>
+        @foreach (var s in Model)
+        {
+            <tr>
+                <td>@(string.IsNullOrWhiteSpace((string)s.FullName) ? (string)s.UserName : (string)s.FullName)</td>
+                <td>@s.UserName</td>
+                <td>@s.Email</td>
+                <td>@(((DateTime)s.JoinedAt).ToLocalTime().ToString("dd/MM/yyyy HH:mm"))</td>
+                <td class="text-end">
+                    <form asp-action="KickStudent" method="post" class="d-inline" onsubmit="return confirm('Remove this student from class?');">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="classId" value="@ViewBag.ClassId" />
+                        <input type="hidden" name="userId" value="@s.Id" />
+                        <button class="btn btn-outline-danger btn-sm">Remove</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+<a class="btn btn-soft" asp-action="Classes">Back</a>
