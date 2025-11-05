@@ -22,7 +22,9 @@
     <div class="d-flex justify-content-between">
         <div>
             <a class="btn btn-stu me-2"
-               asp-controller="Student" asp-action="Roster" asp-route-classId="@Model.Id">
+               asp-controller="Classrooms"
+               asp-action="RosterStudent"
+               asp-route-id="@Model.Id">
                 Student list
             </a>
 
@@ -35,7 +37,6 @@
                asp-controller="Assignment" asp-action="Student" asp-route-classId="@Model.Id">
                 <i class="bi bi-pencil-square"></i> Assignments
             </a>
-
         </div>
 
         <button type="button" class="btn btn-grad-rose" data-leave-class="@Model.Id">

@@ -1,50 +1,70 @@
 ﻿@model POETWeb.Models.ViewModels.AssignmentCreateVM
 @using POETWeb.Models.Enums
 @{
-    ViewData["Title"] = "Create Assignment";
     var editId = ViewBag.EditId as int?;
+    ViewData["Title"] = (editId.HasValue ? "Edit" : "Create") + " Assignment";
 }
 
-<div class="container py-3">
-    <div class="d-flex align-items-center justify-content-between mb-3">
+<!-- Header -->
+<div class="header-gradient mb-0">
+    <div class="container d-flex align-items-center justify-content-between py-3">
         <div>
-            <h3 class="mb-1">@((editId.HasValue ? "Edit" : "Create")) Assignment</h3>
-            <div class="text-muted">Class ID: @Model.ClassId</div>
+            <div class="small opacity-75">Assignment</div>
+            <h4 class="mb-0">@((editId.HasValue ? "Edit" : "Create")) • Class @Model.ClassId</h4>
         </div>
-        <div class="d-flex gap-2">
-            <a asp-action="Teacher" asp-route-classId="@Model.ClassId" class="btn btn-soft">Back</a>
-        </div>
+        <a asp-action="Teacher" asp-route-classId="@Model.ClassId" class="btn btn-light btn-sm">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
     </div>
+</div>
 
-    <!-- IMPORT FROM .TXT -->
-    <div class="card mb-3">
-        <div class="card-header bg-light fw-semibold">Import from .txt</div>
-        <div class="card-body d-flex flex-wrap gap-2 align-items-center">
-            <form asp-action="ImportTxt"
-                  asp-controller="Assignment"
-                  method="post"
-                  enctype="multipart/form-data"
-                  class="d-flex gap-2 align-items-center flex-wrap">
+<div class="container py-3">
+
+    <!-- Import .txt -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <div class="fw-semibold">Import from .txt</div>
+        </div>
+        <div class="card-body">
+
+            <form asp-action="ImportTxt" asp-controller="Assignment" method="post" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="classId" value="@Model.ClassId" />
-                <input type="file" name="txtFile" accept=".txt" class="form-control" style="max-width:360px" />
-                <button type="submit" class="btn btn-outline-primary">
-                    <i class="bi bi-file-earmark-text"></i> Import
-                </button>
+
+                <div id="dropTxt" class="dropzone mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-upload"></i>
+                        <div>
+                            <div class="fw-semibold">Drag your .txt file in here</div>
+                            <div class="text-muted small">or click “Choose file” below</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <div class="input-group" style="max-width:460px">
+                        <span class="input-group-text bg-light"><i class="bi bi-file-earmark-text"></i></span>
+                        <input id="txtFile" type="file" name="txtFile" accept=".txt" class="form-control" required />
+                    </div>
+
+                    <button id="btnImport" type="submit" class="btn btn-outline-primary" disabled>
+                        Import
+                    </button>
+
+                    <button type="button" class="btn btn-soft" data-bs-toggle="modal" data-bs-target="#importHelpModal">
+                        <i class="bi bi-info-circle"></i> Import instructions
+                    </button>
+
+                    <a id="downloadTxtTemplate" class="btn btn-soft" download="assignment-template.txt">
+                        Download template
+                    </a>
+                </div>
             </form>
-
-            <button type="button" class="btn btn-soft"
-                    data-bs-toggle="modal" data-bs-target="#importHelpModal">
-                <i class="bi bi-info-circle"></i> Import instructions
-            </button>
-
-            <a id="downloadTxtTemplate" class="btn btn-soft"
-               download="assignment-template.txt">Download template</a>
         </div>
     </div>
 
-    <!-- FORM CHÍNH -->
-    <form asp-action="@(editId.HasValue ? "Edit" : "Create")" method="post" id="assForm">
+    <!-- Main form -->
+    <form asp-action="@(editId.HasValue ? "Edit" : "Create")" method="post" id="assForm" class="card border-0 shadow-sm">
         @Html.AntiForgeryToken()
         @if (editId.HasValue)
         {
@@ -57,172 +77,202 @@
         <input type="hidden" asp-for="QIndex" id="QIndex" />
         <input type="hidden" asp-for="ChoiceIndex" id="ChoiceIndex" />
 
-        <div asp-validation-summary="All" class="text-danger mb-2"></div>
+        <div class="card-body">
+            <div asp-validation-summary="All" class="text-danger mb-2"></div>
 
-        <div class="row g-3">
-            <div class="col-12 col-md-6">
-                <label class="form-label fw-semibold">Title</label>
-                <input asp-for="Title" class="form-control" />
-                <span asp-validation-for="Title" class="text-danger"></span>
-            </div>
+            <div class="row g-4">
+                <!-- Left: fields -->
+                <div class="col-12 col-xl-8">
+                    <div class="row g-3">
+                        <div class="col-12 col-lg-7">
+                            <label class="form-label fw-semibold">Title</label>
+                            <input asp-for="Title" class="form-control" />
+                            <span asp-validation-for="Title" class="text-danger"></span>
+                        </div>
 
-            <div class="col-6 col-md-3">
-                <label class="form-label fw-semibold">Total points (max)</label>
-                <input asp-for="TotalPointsMax"
-                       class="form-control total-max-input"
-                       type="number" min="1" max="100" />
-                <small class="text-muted">Giá trị từ 1 đến 100.</small>
-            </div>
+                        <div class="col-6 col-lg-3">
+                            <label class="form-label fw-semibold">Total points (max)</label>
+                            <input asp-for="TotalPointsMax" class="form-control total-max-input" type="number" min="1" max="100" />
+                            <small class="text-muted">1 – 100</small>
+                        </div>
 
-            <div class="col-12">
-                <label class="form-label fw-semibold">Description</label>
-                <textarea asp-for="Description" rows="2" class="form-control"></textarea>
-            </div>
+                        <div class="col-6 col-lg-2">
+                            <label class="form-label fw-semibold">Attempts</label>
+                            <input asp-for="MaxAttempts" class="form-control" type="number" min="1" max="20" />
+                        </div>
 
-            <div class="col-6 col-md-3">
-                <label class="form-label fw-semibold">Duration (minutes)</label>
-                <input asp-for="DurationMinutes" class="form-control" type="number" min="1" max="600" />
-            </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Description</label>
+                            <textarea asp-for="Description" rows="2" class="form-control"></textarea>
+                        </div>
 
-            <div class="col-6 col-md-3">
-                <label class="form-label fw-semibold">Max Attempts</label>
-                <input asp-for="MaxAttempts" class="form-control" type="number" min="1" max="20" />
-            </div>
+                        <div class="col-6 col-lg-3">
+                            <label class="form-label fw-semibold">Duration (min)</label>
+                            <input asp-for="DurationMinutes" class="form-control" type="number" min="1" max="600" />
+                        </div>
 
-            <div class="col-6 col-md-3">
-                <label class="form-label fw-semibold">Open at</label>
-                <input asp-for="OpenAt" class="form-control" type="datetime-local"
-                       value="@(Model.OpenAt.HasValue? Model.OpenAt.Value.ToLocalTime().ToString("yyyy-MM-ddTHH:mm") : null)" />
-            </div>
+                        <div class="col-6 col-lg-4">
+                            <label class="form-label fw-semibold">Open at</label>
+                            <input asp-for="OpenAt" class="form-control" type="datetime-local"
+                                   value="@(Model.OpenAt.HasValue? Model.OpenAt.Value.ToLocalTime().ToString("yyyy-MM-ddTHH:mm") : null)" />
+                        </div>
 
-            <div class="col-6 col-md-3">
-                <label class="form-label fw-semibold">Due date</label>
-                <input asp-for="CloseAt" class="form-control" type="datetime-local"
-                       value="@(Model.CloseAt.HasValue? Model.CloseAt.Value.ToLocalTime().ToString("yyyy-MM-ddTHH:mm") : null)" />
-            </div>
-        </div>
-
-        <hr class="my-3" />
-
-        @for (int qi = 0; qi < Model.Questions.Count; qi++)
-        {
-            var isMcq = Model.Questions[qi].Type == QuestionType.Mcq;
-            <div class="ass-card mb-3" id="q-@qi">
-                <div class="ass-card__head"></div>
-                <div class="ass-card__body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="fw-bold">Question @(qi + 1)</div>
-
-                        <div class="d-flex align-items-center gap-2">
-                            <select asp-for="Questions[qi].Type" class="form-select form-select-sm q-type" data-qindex="@qi">
-                                <option value="@((int)QuestionType.Mcq)">MCQ</option>
-                                <option value="@((int)QuestionType.Essay)">Essay</option>
-                            </select>
-
-                            <button type="submit" class="btn btn-outline-danger btn-sm"
-                                    formnovalidate
-                                    data-anchor="#q-@qi"
-                                    onclick="return opRemoveQ(@qi)">
-                                Remove
-                            </button>
+                        <div class="col-6 col-lg-4">
+                            <label class="form-label fw-semibold">Due date</label>
+                            <input asp-for="CloseAt" class="form-control" type="datetime-local"
+                                   value="@(Model.CloseAt.HasValue? Model.CloseAt.Value.ToLocalTime().ToString("yyyy-MM-ddTHH:mm") : null)" />
                         </div>
                     </div>
 
-                    <div class="mb-2">
-                        <label class="form-label fw-semibold">Prompt</label>
-                        <textarea asp-for="Questions[qi].Prompt" rows="2" class="form-control"></textarea>
-                        <span asp-validation-for="Questions[qi].Prompt" class="text-danger"></span>
-                    </div>
+                    <hr class="my-4" />
 
-                    <div class="mb-3 col-12 col-md-3">
-                        <label class="form-label fw-semibold">Points</label>
-                        <input asp-for="Questions[qi].Points"
-                               class="form-control points-input"
-                               type="number" step="0.5" min="0" />
-                    </div>
+                    <!-- Questions -->
+                    <div id="questions">
+                        @for (int qi = 0; qi < Model.Questions.Count; qi++)
+                        {
+                            var isMcq = Model.Questions[qi].Type == QuestionType.Mcq;
+                            <div class="qcard mb-3" id="q-@qi">
+                                <div class="qcard-head" data-bs-toggle="collapse" data-bs-target="#qbody-@qi" aria-expanded="true">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="qchip">@((isMcq ? "MCQ" : "Essay"))</span>
+                                        <strong>Question @(qi + 1)</strong>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="d-flex align-items-center gap-1 text-muted small">
+                                            <i class="bi bi-star"></i>
+                                            <span class="qpoints">@Model.Questions[qi].Points.ToString("0.##")</span> pts
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-ghost" title="Collapse/Expand">
+                                            <i class="bi bi-chevron-down"></i>
+                                        </button>
+                                    </div>
+                                </div>
 
-                    @if (isMcq)
-                    {
-                        <!-- MCQ -->
-                        <div class="mcq-block" data-for="@qi">
-                            <div class="row g-2">
-                                @for (int ci = 0; ci < Model.Questions[qi].Choices.Count; ci++)
-                                {
-                                    <div class="col-12 col-md-6">
-                                        <div class="input-group">
-                                            <div class="input-group-text">
-                                                <input type="radio" name="Questions[@qi].CorrectIndex" value="@ci"
-                                                       @(Model.Questions[qi].CorrectIndex == ci ? "checked" : "") />
+                                <div id="qbody-@qi" class="collapse show">
+                                    <div class="qcard-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <label class="form-label fw-semibold mb-0 me-2">Type</label>
+                                                <select asp-for="Questions[qi].Type" class="form-select form-select-sm q-type" data-qindex="@qi" style="min-width:120px">
+                                                    <option value="@((int)QuestionType.Mcq)">MCQ</option>
+                                                    <option value="@((int)QuestionType.Essay)">Essay</option>
+                                                </select>
                                             </div>
-                                            <input asp-for="Questions[qi].Choices[ci].Text" class="form-control"
-                                                   placeholder="Choice @(ci + 1)" />
-                                            <button class="btn btn-outline-secondary" type="submit"
-                                                    formnovalidate
-                                                    data-anchor="#q-@qi"
-                                                    onclick="return opRemoveChoice(@qi, @ci)">
-                                                <i class="bi bi-x"></i>
+                                            <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                    formnovalidate data-anchor="#q-@qi" onclick="return opRemoveQ(@qi)">
+                                                Remove
                                             </button>
                                         </div>
+
+                                        <div class="mb-2">
+                                            <label class="form-label fw-semibold">Prompt</label>
+                                            <textarea asp-for="Questions[qi].Prompt" rows="2" class="form-control"></textarea>
+                                            <span asp-validation-for="Questions[qi].Prompt" class="text-danger"></span>
+                                        </div>
+
+                                        <div class="mb-3 col-12 col-md-3">
+                                            <label class="form-label fw-semibold">Points</label>
+                                            <input type="number"
+                                                   name="Questions[@qi].Points"
+                                                   class="form-control points-input"
+                                                   inputmode="decimal"
+                                                   step="0.5" min="0"
+                                                   value="@(Model.Questions[qi].Points.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" />
+                                        </div>
+
+                                        @if (isMcq)
+                                        {
+                                            <div class="mcq-block" data-for="@qi">
+                                                <div class="row g-2">
+                                                    @for (int ci = 0; ci < Model.Questions[qi].Choices.Count; ci++)
+                                                    {
+                                                        <div class="col-12 col-md-6">
+                                                            <div class="input-group">
+                                                                <span class="input-group-text">
+                                                                    <input type="radio" name="Questions[@qi].CorrectIndex" value="@ci"
+                                                                           @(Model.Questions[qi].CorrectIndex == ci ? "checked" : "") />
+                                                                </span>
+                                                                <input asp-for="Questions[qi].Choices[ci].Text" class="form-control" placeholder="Choice @(ci + 1)" />
+                                                                <button class="btn btn-outline-secondary" type="submit"
+                                                                        formnovalidate data-anchor="#q-@qi" onclick="return opRemoveChoice(@qi, @ci)">
+                                                                    <i class="bi bi-x"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                                <div class="mt-2">
+                                                    <button type="submit" class="btn btn-soft"
+                                                            formnovalidate data-anchor="#q-@qi" onclick="return opAddChoice(@qi)">
+                                                        + Add choice
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="essay-block alert alert-light border mb-0" data-for="@qi">
+                                                Essay question. Teacher will grade manually.
+                                            </div>
+                                        }
                                     </div>
-                                }
+                                </div>
                             </div>
-                            <div class="mt-2">
-                                <button type="submit" class="btn btn-soft"
-                                        formnovalidate
-                                        data-anchor="#q-@qi"
-                                        onclick="return opAddChoice(@qi)">
-                                    + Add choice
+                        }
+                    </div>
+                </div>
+
+                <!-- Right: summary -->
+                <div class="col-12 col-xl-4">
+                    <div class="card border-0 shadow-sm sticky-top" style="top:90px">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="fw-semibold">Points summary</div>
+                                <span class="badge bg-light text-dark" id="badgeOk">Checking…</span>
+                            </div>
+
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span>Current total</span>
+                                <strong><span id="totalPoints">0</span> pts</strong>
+                            </div>
+                            <div class="progress" style="height:8px">
+                                <div id="totalBar" class="progress-bar bg-summary" role="progressbar" style="width:0%"></div>
+                            </div>
+                            <div class="d-flex justify-content-between small text-muted mt-1">
+                                <span>Max</span>
+                                <span><span id="totalMax">@Model.TotalPointsMax</span> pts</span>
+                            </div>
+
+                            <div class="alert alert-warning d-none mt-3 mb-0 small" id="totalWarn">
+                                Total must match the maximum.
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white">
+                            <div class="d-grid">
+                                <button type="submit" id="btnSave" class="btn btn-grad-amber"
+                                        onclick="document.getElementById('Op').value=''">
+                                    Save Assignment
                                 </button>
                             </div>
                         </div>
-                    }
-                    else
-                    {
-                        <!-- ESSAY -->
-                        <div class="essay-block alert alert-light border mb-0" data-for="@qi">
-                            Essay question. Teacher will grade manually.
-                        </div>
-                    }
+                    </div>
                 </div>
+
             </div>
-        }
-
-        <div class="d-flex align-items-center justify-content-between mb-2 mt-1">
-            <div class="fw-semibold">
-                Total points: <span id="totalPoints">0</span> / <span id="totalMax">@Model.TotalPointsMax</span>
-            </div>
-            <span id="totalBadge" class="badge bg-danger d-none">Total must match the maximum</span>
-        </div>
-
-        <div id="ass-bottom"></div>
-
-        <div class="d-flex justify-content-between">
-            <button type="submit" class="btn btn-soft"
-                    formnovalidate
-                    data-anchor="#ass-bottom"
-                    onclick="return opAddQ()">
-                + Add question
-            </button>
-
-            <button type="submit" id="btnSave" class="btn btn-grad-amber"
-                    onclick="document.getElementById('Op').value=''">
-                Save Assignment
-            </button>
         </div>
     </form>
 </div>
 
-<!-- Modal: Import instructions -->
+<!-- Modal: Import instructions (unchanged content) -->
 <div class="modal fade" id="importHelpModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header" style="background:linear-gradient(90deg,#6366f1,#22d3ee);color:#fff;">
                 <h5 class="modal-title">How to create the .txt file</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-
             <div class="modal-body">
-                <p class="mb-2">Mỗi đề thi là một file <code>.txt</code>. Tổng điểm các câu phải bằng <strong>“Total points (max)”</strong> mà giáo viên đặt (1–100).</p>
+                <p class="mb-2">Mỗi đề thi là file <code>.txt</code>. Tổng điểm câu hỏi phải bằng <strong>“Total points (max)”</strong> (1–100).</p>
 
                 <h6 class="mt-3">1) Metadata</h6>
 <pre class="codebox">Title: Midterm Exam
@@ -233,7 +283,7 @@ MaxAttempts: 2
 OpenAt: 10/11/2025 08:00
 CloseAt: 12/11/2025 23:59</pre>
 
-                <h6 class="mt-3">2) Câu hỏi (mỗi câu cách nhau 1 dòng trống)</h6>
+                <h6 class="mt-3">2) Câu hỏi</h6>
 <pre class="codebox">Q: What is 2+2?
 Type: MCQ
 Points: 5
@@ -250,49 +300,11 @@ Points: 15</pre>
 
                 <ul class="small text-muted">
                     <li><code>Points</code> bội số <code>0.5</code>, không âm.</li>
-                    <li>MCQ cần ít nhất 2 lựa chọn. <code>Answer</code> chấp nhận số (1..N) hoặc chữ cái (A, B, C...).</li>
+                    <li>MCQ ≥ 2 lựa chọn. <code>Answer</code> là số (1..N) hoặc chữ cái (A, B, C...).</li>
                     <li>Ngày giờ: <code>dd/MM/yyyy HH:mm</code>.</li>
                     <li><code>TotalPoints</code> (1–100) là thang điểm tối đa; tổng các câu phải bằng giá trị này.</li>
                 </ul>
-
-                <h6 class="mt-3">3) Ví dụ hoàn chỉnh (80 điểm)</h6>
-<pre class="codebox">Title: Sample Exam
-Description: Demo import
-TotalPoints: 80
-Duration: 30
-MaxAttempts: 1
-OpenAt: 03/11/2025 08:00
-CloseAt: 05/11/2025 23:59
-
-Q: What is 2+2?
-Type: MCQ
-Points: 5
-Choices:
-- 1
-- 3
-- 4
-- 5
-Answer: 3
-
-Q: Capital of France?
-Type: MCQ
-Points: 5
-Choices:
-- Berlin
-- Paris
-- Rome
-- Madrid
-Answer: 2
-
-Q: Short essay about climate change.
-Type: Essay
-Points: 70</pre>
-
-                <div class="alert alert-light border small mb-0">
-                    <strong>Lưu ý:</strong> Nếu tổng điểm câu hỏi ≠ <em>TotalPoints</em> hoặc sai format, hệ thống sẽ báo lỗi và chưa cho lưu. Bạn có thể chỉnh trực tiếp trên form sau import.
-                </div>
             </div>
-
             <div class="modal-footer">
                 <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Close</button>
             </div>
@@ -301,9 +313,78 @@ Points: 70</pre>
 </div>
 
 <style>
+    .header-gradient {
+        background: linear-gradient(90deg,#6366f1,#22d3ee);
+        color: #fff
+    }
+
     .btn-soft {
         background: #f3f4f6;
-        border: 1px solid #e5e7eb;
+        border: 1px solid #e5e7eb
+    }
+
+    .btn-grad-amber {
+        background: linear-gradient(90deg,#f59e0b,#ef4444);
+        color: #fff;
+        border: none
+    }
+
+        .btn-grad-amber:hover {
+            filter: brightness(.95);
+            color: #fff
+        }
+
+    /* Disabled import look */
+    #btnImport:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+        filter: grayscale(20%)
+    }
+
+    /* Dropzone */
+    .dropzone {
+        border: 1.5px dashed #c7d2fe;
+        border-radius: .75rem;
+        padding: 1rem;
+        background: #fafbff
+    }
+
+        .dropzone.drag {
+            background: #eef2ff;
+            border-color: #6366f1
+        }
+
+    /* Question card (accordion style) */
+    .qcard {
+        border: 1px solid #ececec;
+        border-radius: 12px;
+        overflow: hidden
+    }
+
+    .qcard-head {
+        background: linear-gradient(90deg,#eef2ff,#f8fafc);
+        padding: .65rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer
+    }
+
+    .qcard-body {
+        padding: 1rem
+    }
+
+    .qchip {
+        background: #e0f2fe;
+        color: #0369a1;
+        font-weight: 600;
+        border-radius: 999px;
+        padding: .1rem .5rem;
+        font-size: .75rem
+    }
+
+    .bg-summary {
+        background: linear-gradient(90deg,#34d399,#10b981)
     }
 
     .codebox {
@@ -313,123 +394,112 @@ Points: 70</pre>
         padding: .75rem 1rem;
         font-size: .875rem;
         white-space: pre-wrap;
-        overflow: auto;
-        border: 1px solid #111827;
+        border: 1px solid #111827
     }
 </style>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-
     <script>
-                /* ===== Toggle MCQ/Essay UI ===== */
-                function setMcqBlockEnabled(qIndex, enable) {
-                    const block = document.querySelector('.mcq-block[data-for="' + qIndex + '"]');
-                    const essay = document.querySelector('.essay-block[data-for="' + qIndex + '"]');
-                    if (block) {
-                        block.querySelectorAll('input,select,textarea,button').forEach(el => {
-                            if (el.type === 'submit') return; // giữ nút lệnh hoạt động
-                            el.disabled = !enable;
-                        });
-                        block.style.display = enable ? 'block' : 'none';
-                    }
-                    if (essay) essay.style.display = enable ? 'none' : 'block';
-                }
-
-                document.querySelectorAll('.q-type').forEach(function (sel) {
-                    sel.addEventListener('change', function () {
-                        var idx = this.getAttribute('data-qindex');
-                        var isMcq = this.value === '1';
-                        setMcqBlockEnabled(idx, isMcq);
-                    }, { passive: true });
+            /* Toggle MCQ/Essay UI */
+            function setMcqBlockEnabled(qIndex, enable){
+              const block=document.querySelector('.mcq-block[data-for="'+qIndex+'"]');
+              const essay=document.querySelector('.essay-block[data-for="'+qIndex+'"]');
+              if(block){
+                block.querySelectorAll('input,select,textarea,button').forEach(el=>{
+                  if(el.type==='submit') return; el.disabled=!enable;
                 });
+                block.style.display=enable?'block':'none';
+              }
+              if(essay) essay.style.display=enable?'none':'block';
+            }
+            document.querySelectorAll('.q-type').forEach(sel=>{
+              sel.addEventListener('change',function(){
+                const idx=this.getAttribute('data-qindex'); setMcqBlockEnabled(idx,this.value==='1');
+              },{passive:true});
+            });
+            document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.q-type').forEach(sel=>{
+              const idx=sel.getAttribute('data-qindex'); setMcqBlockEnabled(idx, sel.value==='1');
+            });},{once:true});
 
-                // init state after render
-                document.addEventListener('DOMContentLoaded', function () {
-                    document.querySelectorAll('.q-type').forEach(function (sel) {
-                        var idx = sel.getAttribute('data-qindex');
-                        var isMcq = sel.value === '1';
-                        setMcqBlockEnabled(idx, isMcq);
-                    });
-                }, { once: true });
+            /* Scroll restore */
+            (function(){
+              const KEY_POS='ass-create-scrollY', KEY_ANCHOR='ass-create-anchor';
+              document.querySelectorAll('#assForm button[type="submit"]').forEach(btn=>{
+                btn.addEventListener('click',()=>{
+                  const a=btn.getAttribute('data-anchor')||'';
+                  if(a) sessionStorage.setItem(KEY_ANCHOR,a);
+                  else  sessionStorage.setItem(KEY_POS,String(window.scrollY||0));
+                },{passive:true});
+              });
+              window.addEventListener('DOMContentLoaded',()=>{
+                const a=sessionStorage.getItem(KEY_ANCHOR);
+                if(a){ const el=document.querySelector(a); if(el) el.scrollIntoView({behavior:'auto',block:'start'}); sessionStorage.removeItem(KEY_ANCHOR); return; }
+                const y=parseInt(sessionStorage.getItem(KEY_POS)||'0',10); if(!isNaN(y)&&y>0) window.scrollTo(0,y);
+                sessionStorage.removeItem(KEY_POS);
+              },{once:true});
+            })();
 
-                /* ===== Postback scroll restore ===== */
-                (function () {
-                    const KEY_POS = 'ass-create-scrollY';
-                    const KEY_ANCHOR = 'ass-create-anchor';
+            /* Command helpers */
+            function setOp(op,qIndex,choiceIndex){document.getElementById('Op').value=op;
+              if(qIndex!==undefined)document.getElementById('QIndex').value=qIndex;
+              if(choiceIndex!==undefined)document.getElementById('ChoiceIndex').value=choiceIndex;}
+            function opAddQ(){setOp('add-q');return true;} function opRemoveQ(i){setOp('remove-q',i);return true;}
+            function opAddChoice(i){setOp('add-choice',i);return true;} function opRemoveChoice(i,c){setOp('remove-choice',i,c);return true;}
 
-                    document.querySelectorAll('#assForm button[type="submit"]').forEach(btn => {
-                        btn.addEventListener('click', () => {
-                            const a = btn.getAttribute('data-anchor') || '';
-                            if (a) {
-                                sessionStorage.setItem(KEY_ANCHOR, a);
-                            } else {
-                                sessionStorage.setItem(KEY_POS, String(window.scrollY || window.pageYOffset || 0));
-                            }
-                        }, { passive: true });
-                    });
+            /* Total points summary */
+            function recalcTotal(){
+              let sum=0;
+              document.querySelectorAll('.points-input').forEach(inp=>{
+                let v=parseFloat((inp.value||'').toString().replace(',','.')); if(!isNaN(v)) sum+=v;
+                const card=inp.closest('.qcard'); if(card){ card.querySelector('.qpoints').textContent=isNaN(v)?'0':(Math.round(v*100)/100).toString().replace(/\.0+$/,''); }
+              });
+              const maxInp=document.querySelector('.total-max-input');
+              let max=parseInt(maxInp?.value||'100',10); if(isNaN(max)||max<1)max=1; if(max>100)max=100;
 
-                    window.addEventListener('DOMContentLoaded', () => {
-                        const a = sessionStorage.getItem(KEY_ANCHOR);
-                        if (a) {
-                            const el = document.querySelector(a);
-                            if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
-                            sessionStorage.removeItem(KEY_ANCHOR);
-                            return;
-                        }
-                        const y = parseInt(sessionStorage.getItem(KEY_POS) || '0', 10);
-                        if (!isNaN(y) && y > 0) window.scrollTo(0, y);
-                        sessionStorage.removeItem(KEY_POS);
-                    }, { once: true });
-                })();
+              const nice=x=>{const r=Math.round(x*100)/100; return r%1===0? r.toFixed(0): r.toFixed(2).replace(/\.0$/,'');}
+              document.getElementById('totalPoints').textContent=nice(sum);
+              document.getElementById('totalMax').textContent=String(max);
 
-                /* ===== Command helpers ===== */
-                function setOp(op, qIndex, choiceIndex) {
-                    document.getElementById('Op').value = op;
-                    if (qIndex !== undefined) document.getElementById('QIndex').value = qIndex;
-                    if (choiceIndex !== undefined) document.getElementById('ChoiceIndex').value = choiceIndex;
-                }
-                function opAddQ() { setOp('add-q'); return true; }
-                function opRemoveQ(i) { setOp('remove-q', i); return true; }
-                function opAddChoice(i) { setOp('add-choice', i); return true; }
-                function opRemoveChoice(i, c) { setOp('remove-choice', i, c); return true; }
+              const pct=max>0?Math.min(100,Math.max(0, sum/max*100)):0;
+              document.getElementById('totalBar').style.width=pct+'%';
 
-                // ==== Total points live check (sum == max) ====
-                function recalcTotal() {
-                    let sum = 0;
-                    document.querySelectorAll('.points-input').forEach(inp => {
-                        let v = parseFloat((inp.value || '').toString().replace(',', '.'));
-                        if (!isNaN(v)) sum += v;
-                    });
-                    const maxInp = document.querySelector('.total-max-input');
-                    let max = parseInt(maxInp?.value || '100', 10);
-                    if (isNaN(max) || max < 1) max = 1;
-                    if (max > 100) max = 100;
+              const ok=Math.abs(sum-max)<1e-9;
+              document.getElementById('totalWarn').classList.toggle('d-none', ok);
+              const badge=document.getElementById('badgeOk');
+              badge.className = ok ? 'badge bg-success' : 'badge bg-warning text-dark';
+              badge.textContent = ok ? 'OK' : 'Mismatch';
+              const btn=document.getElementById('btnSave'); if(ok) btn.removeAttribute('disabled'); else btn.setAttribute('disabled','disabled');
+            }
+            document.addEventListener('input',e=>{
+              if(e.target && (e.target.classList.contains('points-input')||e.target.classList.contains('total-max-input'))){recalcTotal();}
+            },{passive:true});
+            document.addEventListener('DOMContentLoaded',recalcTotal,{once:true});
 
-                    const tp = document.getElementById('totalPoints');
-                    const tm = document.getElementById('totalMax');
-                    const badge = document.getElementById('totalBadge');
-                    const btn = document.getElementById('btnSave');
+            /* Import: enable/disable + dropzone */
+            (function(){
+              const f=document.getElementById('txtFile'); const b=document.getElementById('btnImport'); const dz=document.getElementById('dropTxt');
+              if(!f||!b||!dz) return;
+              const toggle=()=>{b.disabled=!(f.files && f.files.length>0);}
+              f.addEventListener('change',toggle,{passive:true}); toggle();
 
-                    tp.textContent = (Math.round(sum * 100) / 100).toFixed(2).replace(/\.00$/, '');
-                    tm.textContent = String(max);
+              ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,(e)=>{e.preventDefault(); dz.classList.add('drag');}));
+              ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,(e)=>{e.preventDefault(); dz.classList.remove('drag');}));
+              dz.addEventListener('drop',(e)=>{
+                const files=e.dataTransfer?.files; if(files && files.length){ f.files=files; f.dispatchEvent(new Event('change')); }
+              });
+            })();
 
-                    const ok = Math.abs(sum - max) < 1e-9;
-                    if (ok) { badge.classList.add('d-none'); btn?.removeAttribute('disabled'); }
-                    else    { badge.classList.remove('d-none'); btn?.setAttribute('disabled', 'disabled'); }
-                }
+            /* Points multiple-of-0.5 guard */
+            (function(){
+              function isHalfStep(v){ if(v===''||v==null) return true; const n=Number(v); if(!isFinite(n)||n<0) return false; return Math.abs(Math.round(n*2)-n*2)<1e-9; }
+              function hook(inputs){ inputs.forEach(inp=>{ const run=()=>{ inp.setCustomValidity(isHalfStep(inp.value)?'':'Points must be a multiple of 0.5.'); }; inp.addEventListener('input',run); run(); }); }
+              document.addEventListener('DOMContentLoaded',()=>{ hook([...document.querySelectorAll('.points-input')]); },{once:true});
+            })();
 
-                document.addEventListener('input', e => {
-                    if (e.target && (e.target.classList.contains('points-input') || e.target.classList.contains('total-max-input'))) {
-                        recalcTotal();
-                    }
-                }, { passive: true });
-
-                document.addEventListener('DOMContentLoaded', () => {
-                    recalcTotal();
-
-                    // Gắn nội dung template vào nút download (có TotalPoints)
-                    const tpl = `Title: Sample Exam
+            /* Download template */
+            document.addEventListener('DOMContentLoaded',()=>{
+              const tpl=`Title: Sample Exam
         Description: Demo import
         TotalPoints: 80
         Duration: 30
@@ -460,11 +530,8 @@ Points: 70</pre>
         Q: Short essay about climate change.
         Type: Essay
         Points: 70`;
-                    const a = document.getElementById('downloadTxtTemplate');
-                    if(a){
-                        const blob = new Blob([tpl], {type: 'text/plain;charset=utf-8'});
-                        a.href = URL.createObjectURL(blob);
-                    }
-                }, { once: true });
+              const a=document.getElementById('downloadTxtTemplate');
+              if(a){ const blob=new Blob([tpl],{type:'text/plain;charset=utf-8'}); a.href=URL.createObjectURL(blob); }
+            },{once:true});
     </script>
 }

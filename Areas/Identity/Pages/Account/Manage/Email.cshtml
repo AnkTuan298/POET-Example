@@ -5,40 +5,148 @@
     ViewData["ActivePage"] = ManageNavPages.Email;
 }
 
-<h3>@ViewData["Title"]</h3>
+<h3 class="fw-bold text-slate-900 mb-3">Email</h3>
 <partial name="_StatusMessage" for="StatusMessage" />
-<div class="row">
-    <div class="col-md-6">
-        <form id="email-form" method="post">
-            <div asp-validation-summary="All" class="text-danger" role="alert"></div>
-            @if (Model.IsEmailConfirmed)
-            {
-                <div class="form-floating mb-3 input-group">
-                    <input asp-for="Email" class="form-control" placeholder="Please enter your email." disabled />
-                        <div class="input-group-append">
-                            <span class="h-100 input-group-text text-success font-weight-bold">✓</span>
-                        </div>
-                    <label asp-for="Email" class="form-label"></label>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <form id="email-form" method="post" class="mail-card p-3">
+            <div asp-validation-summary="All" class="text-danger mb-2" role="alert"></div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Current email</label>
+
+                <div class="input-group">
+                    <input asp-for="Email"
+                           class="form-control"
+                           placeholder="your@email"
+                           disabled />
+                    @if (Model.IsEmailConfirmed)
+                    {
+                        <span class="input-group-text text-success fw-bold" title="Verified">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="input-group-text text-warning fw-bold" title="Not verified">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                        </span>
+                    }
                 </div>
-            }
-            else
-            {
-                <div class="form-floating mb-3">
-                    <input asp-for="Email" class="form-control" placeholder="Please enter your email." disabled />
-                    <label asp-for="Email" class="form-label"></label>
-                    <button id="email-verification" type="submit" asp-page-handler="SendVerificationEmail" class="btn btn-link">Send verification email</button>
-                </div>
-            }
-            <div class="form-floating mb-3">
-                <input asp-for="Input.NewEmail" class="form-control" autocomplete="email" aria-required="true" placeholder="Please enter new email." />
-                <label asp-for="Input.NewEmail" class="form-label"></label>
-                <span asp-validation-for="Input.NewEmail" class="text-danger"></span>
+
+                @if (!Model.IsEmailConfirmed)
+                {
+                    <button id="email-verification"
+                            type="submit"
+                            asp-page-handler="SendVerificationEmail"
+                            class="btn btn-soft-slate btn-sm mt-2">
+                        <i class="bi bi-send"></i> Send verification email
+                    </button>
+                    <div class="form-text">You’ll receive a link to verify this address.</div>
+                }
+                else
+                {
+                    <span class="badge bg-success-subtle text-success-emphasis rounded-pill mt-2 d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-patch-check-fill"></i> Verified
+                    </span>
+                }
             </div>
-            <button id="change-email-button" type="submit" asp-page-handler="ChangeEmail" class="w-100 btn btn-lg btn-primary">Change email</button>
+
+            <div class="mb-3">
+                <label asp-for="Input.NewEmail" class="form-label fw-semibold">New email</label>
+                <input asp-for="Input.NewEmail"
+                       class="form-control"
+                       autocomplete="email"
+                       aria-required="true"
+                       placeholder="Enter a new email" />
+                <span asp-validation-for="Input.NewEmail" class="text-danger small"></span>
+                <div class="form-text">We’ll send a confirmation link to the new address.</div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button id="change-email-button"
+                        type="submit"
+                        asp-page-handler="ChangeEmail"
+                        class="btn btn-grad-indigo px-4">
+                    Change email
+                </button>
+                <a asp-area="Identity" asp-page="/Account/Manage/Index" class="btn btn-light">Back</a>
+            </div>
         </form>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="mail-side p-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-info-circle"></i>
+                <strong>Heads up</strong>
+            </div>
+            <ul class="small text-muted mb-0">
+                <li>Verification is required to receive class notifications.</li>
+                <li>If you don’t see the email, check Spam/Promotions.</li>
+                <li>Links expire for security. You can request a fresh one anytime.</li>
+            </ul>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+
+<style>
+    /* Card shells */
+    .mail-card {
+        background: #fff;
+        border: 1px solid #eef2f7;
+        border-radius: 16px;
+        box-shadow: 0 6px 18px rgba(24,39,75,.08);
+    }
+
+    .mail-side {
+        background: linear-gradient(120deg,#f8fafc,#eef2ff);
+        border: 1px solid #e8ecfb;
+        border-radius: 16px;
+    }
+
+    /* Reused buttons (match your site) */
+    .btn-soft-slate {
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        color: #1f2937;
+    }
+
+        .btn-soft-slate:hover {
+            background: #eef2f7
+        }
+
+    .btn-grad-indigo {
+        background: linear-gradient(90deg,#6366f1,#22d3ee);
+        border: none;
+        color: #fff;
+    }
+
+        .btn-grad-indigo:hover {
+            filter: brightness(.95);
+            color: #fff
+        }
+
+    /* Bootstrap 5 “subtle” fallback if theme lacks it */
+    .bg-success-subtle {
+        background: #ecfdf5;
+    }
+
+    .text-success-emphasis {
+        color: #065f46;
+    }
+
+    /* Inputs */
+    .form-label {
+        margin-bottom: .35rem
+    }
+
+    .input-group-text {
+        background: #f8fafc
+    }
+</style>

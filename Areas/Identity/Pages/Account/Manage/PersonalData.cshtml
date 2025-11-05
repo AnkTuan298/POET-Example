@@ -5,23 +5,235 @@
     ViewData["ActivePage"] = ManageNavPages.PersonalData;
 }
 
-<h3>@ViewData["Title"]</h3>
+<h3 class="fw-bold text-slate-900 mb-3">Personal Data</h3>
 
-<div class="row">
-    <div class="col-md-6">
-        <p>Your account contains personal data that you have given us. This page allows you to download or delete that data.</p>
-        <p>
-            <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
-        </p>
-        <form id="download-data" asp-page="DownloadPersonalData" method="post">
-            <button class="btn btn-primary" type="submit">Download</button>
-        </form>
-        <p>
-            <a id="delete" asp-page="DeletePersonalData" class="btn btn-danger">Delete</a>
-        </p>
+<div class="row g-3">
+    <div class="col-lg-7">
+        <section class="pd-card p-3">
+            <div class="d-flex align-items-start gap-3 mb-2">
+                <div class="pd-icon">
+                    <i class="bi bi-person-badge"></i>
+                </div>
+                <div>
+                    <div class="h5 m-0">Your data, your control</div>
+                    <div class="text-muted small">
+                        Your account contains personal data you provided. You can download or request deletion below.
+                    </div>
+                </div>
+            </div>
+
+            <hr class="pd-sep" />
+
+            <!-- Download block -->
+            <div class="pd-block d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-start gap-2">
+                    <div class="pd-pill pd-pill-sky"><i class="bi bi-download"></i></div>
+                    <div>
+                        <div class="fw-semibold">Download a copy</div>
+                        <div class="text-muted small">Export a machine-readable archive of your personal data.</div>
+                    </div>
+                </div>
+
+                <form id="download-data" asp-page="DownloadPersonalData" method="post" class="m-0">
+                    <button class="btn btn-grad-indigo">
+                        <i class="bi bi-arrow-down-circle"></i> Download
+                    </button>
+                </form>
+            </div>
+
+            <!-- Danger block -->
+            <div class="pd-danger mt-3 p-3">
+                <div class="d-flex align-items-start gap-2 mb-1">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Danger zone — Delete personal data</strong>
+                </div>
+                <div class="text-muted small mb-2">
+                    Deleting your data <span class="fw-semibold text-danger">permanently removes your account</span> and cannot be undone.
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a id="deleteLink" asp-page="DeletePersonalData" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Delete account
+                    </a>
+                    <button type="button" class="btn btn-soft-slate" id="explainBtn">
+                        Why can’t this be undone?
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="col-lg-5">
+        <aside class="pd-side p-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-shield-check"></i>
+                <strong>Privacy notes</strong>
+            </div>
+            <ul class="small text-muted mb-0">
+                <li>We only keep data necessary to run your account.</li>
+                <li>You can export and review your data at any time.</li>
+                <li>Deleting data is irreversible and removes your access.</li>
+            </ul>
+        </aside>
+    </div>
+</div>
+
+<!-- Confirm delete modal -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header modal-danger">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-octagon"></i> Permanently delete your account?
+                </h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">
+                    This will delete your personal data and remove your account. This action <strong>cannot</strong> be undone.
+                </p>
+                <div class="small text-muted">You may want to download your data first.</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-soft-slate" data-bs-dismiss="modal">Cancel</button>
+                <a id="confirmDeleteBtn" class="btn btn-danger">
+                    <i class="bi bi-check2-circle"></i> Yes, delete
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Info modal -->
+<div class="modal fade" id="whyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header" style="background:linear-gradient(90deg,#6366f1,#22d3ee);color:#fff;">
+                <h5 class="modal-title"><i class="bi bi-info-circle"></i> Irreversible action</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="small text-muted">
+                    Account deletion removes identifiers and associated records where legally permissible.
+                    Once requested, recovery isn’t possible. Consider downloading your data before deletion.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-soft-slate" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Hook Delete to a confirm modal for consistent UX
+        (function(){
+          const link = document.getElementById('deleteLink');
+          if(link){
+            link.addEventListener('click', function(e){
+              e.preventDefault();
+              const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmDeleteModal'), {backdrop:'static', keyboard:false});
+              // set target href on confirm button
+              const btn = document.getElementById('confirmDeleteBtn');
+              btn.setAttribute('href', link.getAttribute('href') || '#');
+              modal.show();
+            });
+          }
+          document.getElementById('explainBtn')?.addEventListener('click', ()=>{
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('whyModal')).show();
+          });
+        })();
+    </script>
 }
+
+<style>
+    /* Cards */
+    .pd-card {
+        background: #fff;
+        border: 1px solid #eef2f7;
+        border-radius: 16px;
+        box-shadow: 0 6px 18px rgba(24,39,75,.08);
+    }
+
+    .pd-side {
+        background: linear-gradient(120deg,#f8fafc,#eef2ff);
+        border: 1px solid #e8ecfb;
+        border-radius: 16px;
+    }
+
+    /* Icon & pills */
+    .pd-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(120deg,#eef2ff,#e0f2fe);
+        color: #4f46e5;
+        font-size: 1.25rem;
+    }
+
+    .pd-pill {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem
+    }
+
+    .pd-pill-sky {
+        background: #e0f2fe;
+        color: #0369a1
+    }
+
+    /* Separators */
+    .pd-sep {
+        border: 0;
+        border-top: 1px dashed #e9edf9;
+        margin: 12px 0
+    }
+
+    /* Danger zone */
+    .pd-danger {
+        background: #fff7f7;
+        border: 1px solid #fde2e2;
+        border-radius: 12px;
+    }
+
+        .pd-danger .bi-exclamation-triangle {
+            color: #dc2626
+        }
+
+    /* Buttons (reused site theme) */
+    .btn-grad-indigo {
+        background: linear-gradient(90deg,#6366f1,#22d3ee);
+        border: none;
+        color: #fff
+    }
+
+        .btn-grad-indigo:hover {
+            filter: brightness(.95);
+            color: #fff
+        }
+
+    .btn-soft-slate {
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        color: #1f2937
+    }
+
+        .btn-soft-slate:hover {
+            background: #eef2f7
+        }
+
+    /* Modal theme bits */
+    .modal-danger .modal-header {
+        background: #ef4444;
+        color: #fff
+    }
+</style>

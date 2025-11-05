@@ -5,55 +5,380 @@
     var className = (string)ViewBag.ClassName;
 }
 
-<div class="container-xxl px-4 py-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold text-slate-900 m-0">Add material • @className</h4>
-        <a class="btn btn-soft-slate" asp-action="Index" asp-route-classId="@classId">Back</a>
-    </div>
-
-    <div class="tdash-card p-3">
-        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-        <form asp-action="Create" asp-route-classId="@classId" method="post" enctype="multipart/form-data">
-            @Html.AntiForgeryToken()
-
-            <div class="mb-3">
-                <label asp-for="Title" class="form-label fw-semibold"></label>
-                <input asp-for="Title" class="form-control" />
-                <span asp-validation-for="Title" class="text-danger"></span>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="Description" class="form-label fw-semibold"></label>
-                <input asp-for="Description" class="form-control" />
-                <span asp-validation-for="Description" class="text-danger"></span>
-            </div>
-
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label asp-for="ExternalUrl" class="form-label fw-semibold">URL (YouTube/link)</label>
-                    <input asp-for="ExternalUrl" class="form-control" placeholder="https://..." />
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Upload file</label>
-                    <input name="file" type="file" class="form-control"
-                </div>
-            </div>
-
-            <div class="mb-3 mt-3">
-                <label asp-for="IndexContent" class="form-label fw-semibold">Text content</label>
-                <textarea asp-for="IndexContent" class="form-control" rows="5"
-                          placeholder="Text..."></textarea>
-            </div>
-
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-grad-indigo px-4">Create</button>
-                <a class="btn btn-light" asp-action="Index" asp-route-classId="@classId">Cancel</a>
-            </div>
-        </form>
+<!-- Header -->
+<div class="matc-header">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="py-3">
+            <div class="small opacity-75">Materials</div>
+            <h4 class="mb-0">Add material • @className</h4>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-light btn-sm" asp-action="Index" asp-route-classId="@classId">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
     </div>
 </div>
 
+<div class="container py-3 section-shell">
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+            <form asp-action="Create" asp-route-classId="@classId" method="post" enctype="multipart/form-data" id="materialForm">
+                @Html.AntiForgeryToken()
+
+                <!-- Title + Description -->
+                <div class="row g-3">
+                    <div class="col-12 col-lg-7">
+                        <label asp-for="Title" class="form-label fw-semibold">Title</label>
+                        <input asp-for="Title" class="form-control form-control-lg" placeholder="Short, clear title…" />
+                        <span asp-validation-for="Title" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-lg-5">
+                        <label asp-for="Description" class="form-label fw-semibold">Description</label>
+                        <input asp-for="Description" class="form-control" placeholder="Optional one-line summary…" />
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Content buckets -->
+                <div class="row g-4">
+                    <!-- URL / YouTube -->
+                    <div class="col-12 col-lg-6">
+                        <div class="matc-box">
+                            <div class="matc-box__head">
+                                <div class="matc-box__title">
+                                    <span class="pill pill-indigo"><i class="bi bi-play-btn"></i> Video / Link</span>
+                                </div>
+                                <div class="small text-muted">Paste a YouTube URL or any external link.</div>
+                            </div>
+                            <div class="matc-box__body">
+                                <label asp-for="ExternalUrl" class="form-label fw-semibold">URL</label>
+                                <input asp-for="ExternalUrl" class="form-control" placeholder="https://…" id="urlInput" />
+                                <span asp-validation-for="ExternalUrl" class="text-danger"></span>
+
+                                <div id="urlPreview" class="mt-3 d-none">
+                                    <div class="ratio ratio-16x9">
+                                        <iframe id="ytFrame" title="Preview" allowfullscreen loading="lazy"></iframe>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File upload -->
+                    <div class="col-12 col-lg-6">
+                        <div class="matc-box">
+                            <div class="matc-box__head">
+                                <div class="matc-box__title">
+                                    <span class="pill pill-emerald"><i class="bi bi-paperclip"></i> File upload</span>
+                                </div>
+                                <div class="small text-muted">PDF, images, docs… anything useful.</div>
+                            </div>
+                            <div class="matc-box__body">
+                                <div id="dropZone" class="matc-drop">
+                                    <input id="fileInput" name="file" type="file" class="visually-hidden" />
+                                    <div class="matc-drop__icon"><i class="bi bi-cloud-arrow-up"></i></div>
+                                    <div class="matc-drop__text">
+                                        <strong>Drag & drop</strong> a file here, or
+                                        <button type="button" class="btn btn-soft-slate btn-sm" id="browseBtn">Browse</button>
+                                    </div>
+                                    <div class="small text-muted mt-1">Max size depends on server config.</div>
+                                </div>
+                                <div id="fileInfo" class="alert alert-light border d-none mt-3 mb-0 small">
+                                    <i class="bi bi-file-earmark"></i> <span id="fileName">—</span>
+                                    <span id="fileSize" class="text-muted ms-2"></span>
+                                    <button type="button" class="btn btn-link btn-sm p-0 ms-2" id="clearFile">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Index content -->
+                    <div class="col-12">
+                        <div class="matc-box">
+                            <div class="matc-box__head">
+                                <div class="matc-box__title">
+                                    <span class="pill pill-sky"><i class="bi bi-list-task"></i> Text / Index</span>
+                                </div>
+                                <div class="small text-muted">Quick notes, outline, or HTML index.</div>
+                            </div>
+                            <div class="matc-box__body">
+                                <label asp-for="IndexContent" class="form-label fw-semibold">Content</label>
+                                <textarea asp-for="IndexContent" class="form-control" rows="8"
+                                          placeholder="Write something helpful…"
+                                          id="indexInput"></textarea>
+                                <div class="d-flex justify-content-between small mt-1">
+                                    <div class="text-muted">Supports plain text or HTML.</div>
+                                    <div id="indexCount" class="text-muted">0 chars</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="d-flex align-items-center justify-content-between mt-4">
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="pill pill-gray" id="pillTitle">Title • 0</span>
+                        <span class="pill pill-gray" id="pillUrl">URL</span>
+                        <span class="pill pill-gray" id="pillFile">File</span>
+                        <span class="pill pill-gray" id="pillIndex">Index • 0</span>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <a class="btn btn-soft-slate" asp-action="Index" asp-route-classId="@classId">Cancel</a>
+                        <button type="submit" id="btnCreate" class="btn btn-grad-amber px-4" disabled>Create</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .matc-header {
+        background: linear-gradient(90deg,#6366f1,#22d3ee);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(99,102,241,.15);
+    }
+
+    .section-shell {
+        max-width: 1100px;
+        margin: 0 auto
+    }
+
+    .btn-soft-slate {
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        color: #1f2937
+    }
+
+        .btn-soft-slate:hover {
+            background: #eef2f7
+        }
+
+    .btn-grad-amber {
+        background: linear-gradient(90deg,#f59e0b,#ef4444);
+        color: #fff;
+        border: none
+    }
+
+        .btn-grad-amber:hover {
+            filter: brightness(.95);
+            color: #fff
+        }
+
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        border-radius: 999px;
+        padding: .15rem .6rem;
+        font-size: .78rem;
+        font-weight: 600;
+        border: 1px solid transparent
+    }
+
+    .pill-indigo {
+        background: #eef2ff;
+        color: #4f46e5;
+        border-color: #d9ddff
+    }
+
+    .pill-sky {
+        background: #e0f2fe;
+        color: #0369a1;
+        border-color: #b4e6fb
+    }
+
+    .pill-emerald {
+        background: #e9fff3;
+        color: #0f766e;
+        border-color: #bff3d6
+    }
+
+    .pill-gray {
+        background: #f3f4f6;
+        color: #374151;
+        border-color: #e5e7eb
+    }
+
+    .matc-box {
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    }
+
+    .matc-box__head {
+        padding: 12px 14px;
+        border-bottom: 1px dashed #eef2f7;
+        background: #fbfcff
+    }
+
+    .matc-box__title {
+        font-weight: 700;
+        margin-bottom: .2rem
+    }
+
+    .matc-box__body {
+        padding: 14px
+    }
+
+    .matc-drop {
+        text-align: center;
+        padding: 20px;
+        border: 1px dashed #d9ddff;
+        border-radius: 12px;
+        background: #f8fafc;
+        transition: background .15s ease, border-color .15s ease;
+    }
+
+        .matc-drop.dragover {
+            background: #eef2ff;
+            border-color: #6366f1
+        }
+
+    .matc-drop__icon {
+        font-size: 1.6rem;
+        color: #4f46e5;
+        margin-bottom: .35rem
+    }
+
+    .visually-hidden {
+        position: absolute !important;
+        left: -9999px !important;
+        width: 1px;
+        height: 1px;
+        overflow: hidden
+    }
+</style>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        // utilities
+        function bytesToKB(b){ return Math.round((b || 0)/1024).toLocaleString() + ' KB'; }
+
+        // YouTube preview
+        (function(){
+            const url = document.getElementById('urlInput');
+            const wrap = document.getElementById('urlPreview');
+            const frame = document.getElementById('ytFrame');
+
+            function getYoutubeId(u){
+                try{
+                    const x = new URL(u);
+                    if (x.hostname.includes('youtube.com')) return new URLSearchParams(x.search).get('v') || '';
+                    if (x.hostname.includes('youtu.be')) return x.pathname.replace('/','');
+                }catch{}
+                return '';
+            }
+
+            function update(){
+                const id = getYoutubeId(url.value.trim());
+                if(id){
+                    frame.src = 'https://www.youtube.com/embed/' + id;
+                    wrap.classList.remove('d-none');
+                }else{
+                    frame.removeAttribute('src');
+                    wrap.classList.add('d-none');
+                }
+                refreshPills();
+            }
+
+            url?.addEventListener('input', update, {passive:true});
+            update();
+        })();
+
+        // Drag & drop upload
+        (function(){
+            const dz = document.getElementById('dropZone');
+            const fi = document.getElementById('fileInput');
+            const btn = document.getElementById('browseBtn');
+            const info = document.getElementById('fileInfo');
+            const nameEl = document.getElementById('fileName');
+            const sizeEl = document.getElementById('fileSize');
+            const clearBtn = document.getElementById('clearFile');
+
+            function showFile(f){
+                if(!f){ info.classList.add('d-none'); nameEl.textContent='—'; sizeEl.textContent=''; return; }
+                nameEl.textContent = f.name;
+                sizeEl.textContent = '(' + bytesToKB(f.size) + ')';
+                info.classList.remove('d-none');
+            }
+
+            btn?.addEventListener('click', ()=>fi.click());
+            clearBtn?.addEventListener('click', ()=>{ fi.value=''; showFile(null); refreshPills(); });
+
+            fi?.addEventListener('change', ()=>{
+                showFile(fi.files?.[0] || null);
+                refreshPills();
+            });
+
+            ['dragenter','dragover'].forEach(ev=>{
+                dz.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dz.classList.add('dragover'); }, false);
+            });
+            ['dragleave','drop'].forEach(ev=>{
+                dz.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dz.classList.remove('dragover'); }, false);
+            });
+            dz.addEventListener('drop', e=>{
+                if(e.dataTransfer?.files?.length){
+                    fi.files = e.dataTransfer.files;
+                    showFile(fi.files[0]);
+                    refreshPills();
+                }
+            });
+        })();
+
+        // Index char counter + pill summaries + enable Create
+        (function(){
+            const title = document.getElementById('Title');
+            const url = document.getElementById('urlInput');
+            const file = document.getElementById('fileInput');
+            const index = document.getElementById('indexInput');
+            const count = document.getElementById('indexCount');
+            const btn = document.getElementById('btnCreate');
+
+            const pillTitle = document.getElementById('pillTitle');
+            const pillUrl = document.getElementById('pillUrl');
+            const pillFile = document.getElementById('pillFile');
+            const pillIndex = document.getElementById('pillIndex');
+
+            function niceLen(s){ return (s||'').length.toLocaleString(); }
+
+            window.refreshPills = function(){
+                pillTitle.textContent = 'Title • ' + niceLen(title?.value);
+                pillUrl.className = (url?.value?.trim()? 'pill pill-indigo':'pill pill-gray');
+                pillFile.className = (file?.files?.length? 'pill pill-emerald':'pill pill-gray');
+                pillIndex.textContent = 'Index • ' + niceLen(index?.value);
+                pillIndex.className = (index?.value?.trim()? 'pill pill-sky':'pill pill-gray');
+
+                const hasContent = !!( (url&&url.value.trim()) || (file&&file.files&&file.files.length) || (index&&index.value.trim()) );
+                const hasTitle = !!(title && title.value.trim());
+                btn.disabled = !(hasTitle && hasContent);
+            };
+
+            function updateCount(){
+                count.textContent = (index?.value?.length || 0).toLocaleString() + ' chars';
+            }
+
+            ['input','change'].forEach(ev=>{
+                title?.addEventListener(ev, refreshPills, {passive:true});
+                url?.addEventListener(ev, refreshPills, {passive:true});
+                index?.addEventListener(ev, ()=>{ updateCount(); refreshPills(); }, {passive:true});
+                file?.addEventListener(ev, refreshPills, {passive:true});
+            });
+
+            // init
+            updateCount();
+            refreshPills();
+        })();
+    </script>
 }

@@ -15,10 +15,6 @@
     <hr class="my-3" />
 
     <div class="d-flex flex-wrap gap-2">
-        @if (User.IsInRole("Teacher"))
-        {
-            @if (User.IsInRole("Teacher"))
-            {
                 <a class="btn btn-grad-blue me-2" asp-action="Roster" asp-route-id="@Model.Id">Student List</a>
                 <a class="btn btn-grad-green me-2" asp-controller="Materials" asp-action="Index" asp-route-classId="@Model.Id">Materials</a>
                 <a class="btn btn-grad-amber"
@@ -36,14 +32,5 @@
                         data-class-code="@Model.ClassCode">
                     Delete
                 </button>
-            }
-
-        }
-
-        @if (User.IsInRole("Student"))
-        {
-            <a class="btn btn-info" asp-action="RosterStudent" asp-route-id="@Model.Id">Student List</a>
-            <a class="btn btn-success" asp-controller="Materials" asp-action="Index" asp-route-classId="@Model.Id">Materials</a>
-        }
     </div>
 </div>

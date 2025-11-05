@@ -1,44 +1,371 @@
 ﻿@model IEnumerable<dynamic>
 @{
-    ViewData["Title"] = "Class Roster";
-    var className = (string)ViewBag.ClassName;
-    var classCode = (string)ViewBag.ClassCode;
+    ViewData["Title"] = "Class roster";
+    var className = (string)(ViewBag.ClassName ?? "Class");
+    var classCode = (string)(ViewBag.ClassCode ?? "");
+    var classId = (int)(ViewBag.ClassId ?? 0);
 }
-<h3>Students in @className <small class="text-muted">(@classCode)</small></h3>
 
-<table class="table table-striped table-sm align-middle">
-    <thead>
-        <tr>
-            <th style="width:48px;"></th>
-            <th>Full name</th>
-            <th>User name</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Account</th>
-            <th>Role</th>
-            <th>Joined</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var s in Model)
-        {
-            var avatar = string.IsNullOrWhiteSpace((string?)s.AvatarUrl)
-            ? "https://via.placeholder.com/72?text=🙂"
-            : (string)s.AvatarUrl;
-            <tr>
-                <td><img src="@avatar" alt="avatar" class="avatar-sm" /></td>
-                <td>@s.FullName</td>
-                <td>@s.UserName</td>
-                <td>@s.Email</td>
-                <td>@s.PhoneNumber</td>
-                <td><code>@s.AccountCode</code></td>
-                <td>@s.RoleInClass</td>
-                <td>@(s.JoinedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"))</td>
-            </tr>
+<!-- Header -->
+<div class="rs-header">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="py-3">
+            <div class="small opacity-75">Teacher • Roster</div>
+            <h4 class="mb-0">@className <span class="rs-code">• @classCode</span></h4>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-soft-slate btn-sm" asp-controller="Materials" asp-action="Index" asp-route-classId="@classId">
+                <i class="bi bi-files"></i> Materials
+            </a>
+            <a class="btn btn-soft-slate btn-sm" asp-controller="Assignment" asp-action="Teacher" asp-route-classId="@classId">
+                <i class="bi bi-clipboard2-check"></i> Assignments
+            </a>
+            <a class="btn btn-outline-light btn-sm" asp-controller="Teacher" asp-action="Index">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container py-3 section-shell">
+
+    <!-- Toolbar -->
+    <div class="rs-toolbar">
+        <div class="input-group rs-search">
+            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+            <input id="q" type="text" class="form-control" placeholder="Search name, username, email…">
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <button id="btnCopyEmails" class="btn btn-soft-slate btn-sm">
+                <i class="bi bi-clipboard-check"></i> Copy emails
+            </button>
+            <span class="text-muted small">Total: <strong id="totalCount">@Model.Count()</strong></span>
+        </div>
+    </div>
+
+    <!-- Table -->
+    @if (Model == null || !Model.Any())
+    {
+        <div class="rs-empty">
+            <div class="rs-empty__icon"><i class="bi bi-people"></i></div>
+            <div>No students yet.</div>
+            <div class="text-muted small">Invite your students with the class code.</div>
+        </div>
+    }
+    else
+    {
+        <form id="kickForm" method="post" class="d-none">
+            @Html.AntiForgeryToken()
+        </form>
+
+        <div class="table-responsive">
+            <table class="table align-middle rs-table" id="rosterTable">
+                <thead>
+                    <tr>
+                        <th style="width:56px"></th>
+                        <th>Name</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th class="text-nowrap">Phone</th>
+                        <th class="text-nowrap">Account</th>
+                        <th class="text-nowrap">Role</th>
+                        <th class="text-nowrap">Joined</th>
+                        <th style="width:90px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var i = 0;
+                        foreach (var s in Model)
+                        {
+                            i++;
+                            string fullName = (string?)s.FullName ?? "(unknown)";
+                            string userName = (string?)s.UserName ?? "";
+                            string email = (string?)s.Email ?? "";
+                            string phone = (string?)s.PhoneNumber ?? "";
+                            string account = (string?)s.AccountCode ?? "";
+                            string role = (string?)s.RoleInClass ?? "Student";
+                            string avatar = string.IsNullOrWhiteSpace((string?)s.AvatarUrl)
+                            ? Url.Content("~/images/avatar-default.png")
+                            : (string)s.AvatarUrl;
+                            DateTime joined = (s.JoinedAt is DateTime dt) ? dt : DateTime.UtcNow;
+
+                            string roleCls = role.Trim().ToLowerInvariant() switch
+                            {
+                                "teacher" => "pill pill-indigo",
+                                "assistant" => "pill pill-amber",
+                                _ => "pill pill-emerald"
+                            };
+                            <tr data-name="@fullName.ToLowerInvariant()" data-email="@email.ToLowerInvariant()" data-username="@userName.ToLowerInvariant()">
+                                <td class="text-muted">@i</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <img src="@avatar"
+                                             alt="avatar"
+                                             class="rs-avatar-img"
+                                             loading="lazy" decoding="async"
+                                             onerror="this.onerror=null; this.src='@Url.Content("~/images/avatar-default.png")';">
+                                        <div>
+                                            <div class="fw-semibold text-truncate" title="@fullName">@fullName</div>
+                                            <div class="text-muted small text-truncate" title="@email">@email</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-truncate" title="@userName">@userName</td>
+                                <td class="text-truncate"><a class="rs-mail" href="mailto:@email" title="@email">@email</a></td>
+                                <td class="text-muted text-truncate" title="@phone">@phone</td>
+                                <td><code>@account</code></td>
+                                <td><span class="@roleCls">@role</span></td>
+                                <td class="text-muted">@joined.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="text-end">
+                                    <button class="btn btn-outline-danger btn-sm"
+                                            data-kick='@System.Text.Encodings.Web.HtmlEncoder.Default.Encode(Newtonsoft.Json.JsonConvert.SerializeObject(new { userId = (string)s.Id, fullName }))'>
+                                        <i class="bi bi-person-dash"></i> Kick
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Confirm kick modal -->
+<div class="modal fade" id="kickModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header modal-danger">
+                <h5 class="modal-title"><i class="bi bi-person-dash"></i> Remove student?</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">You are removing <strong id="kickName">this student</strong> from <strong>@className</strong>.</p>
+                <div class="small text-muted">This only unenrolls the student from this class.</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-soft-slate" data-bs-dismiss="modal">Cancel</button>
+                <button id="kickConfirmBtn" class="btn btn-danger">
+                    <i class="bi bi-check2-circle"></i> Remove
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Header */
+    .rs-header {
+        background: linear-gradient(90deg,#6366f1,#22d3ee);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(99,102,241,.15)
+    }
+
+    .rs-code {
+        opacity: .9;
+        font-weight: 600
+    }
+
+    /* Shell */
+    .section-shell {
+        max-width: 1100px;
+        margin: 0 auto
+    }
+
+    /* Toolbar */
+    .rs-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: .75rem
+    }
+
+    .rs-search {
+        min-width: 280px;
+        max-width: 520px
+    }
+
+    /* Table */
+    .rs-table thead th {
+        background: #fafbff;
+        border-bottom: 1px solid #eef2f7;
+        font-weight: 700
+    }
+
+    .rs-table tbody tr {
+        transition: background .12s ease
+    }
+
+        .rs-table tbody tr:hover {
+            background: #fbfcff
         }
-    </tbody>
-</table>
 
-<p>
-    <a class="btn btn-outline-secondary" asp-action="Index">Back</a>
-</p>
+    /* Avatar: only the image, no fallback, no colored background */
+    .rs-avatar-img {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        object-fit: cover;
+        display: block
+    }
+
+    /* Links & pills */
+    .rs-mail {
+        text-decoration: none
+    }
+
+        .rs-mail:hover {
+            text-decoration: underline
+        }
+
+    .pill {
+        display: inline-block;
+        padding: .2rem .5rem;
+        border-radius: 999px;
+        font-size: .75rem;
+        font-weight: 700
+    }
+
+    .pill-emerald {
+        background: #ecfdf5;
+        color: #065f46
+    }
+
+    .pill-amber {
+        background: #fffbeb;
+        color: #92400e
+    }
+
+    .pill-indigo {
+        background: #eef2ff;
+        color: #3730a3
+    }
+
+    /* Empty state */
+    .rs-empty {
+        text-align: center;
+        padding: 2.25rem;
+        border-radius: 14px;
+        background: #fbfcff;
+        border: 1px solid #eef2f7
+    }
+
+    .rs-empty__icon {
+        width: 48px;
+        height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        margin-bottom: .5rem;
+        background: linear-gradient(120deg,#eef2ff,#e0f2fe);
+        color: #4f46e5;
+        font-size: 1.25rem
+    }
+
+    /* Buttons reused */
+    .btn-soft-slate {
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        color: #1f2937
+    }
+
+        .btn-soft-slate:hover {
+            background: #eef2f7
+        }
+
+    /* Modal */
+    .modal-danger .modal-header {
+        background: #ef4444;
+        color: #fff
+    }
+</style>
+
+@section Scripts {
+    <script>
+        (function(){
+          const q = document.getElementById('q');
+          const rows = Array.from(document.querySelectorAll('#rosterTable tbody tr'));
+          const total = document.getElementById('totalCount');
+          const classId = @classId;
+
+          function filter(){
+            const term = (q?.value || '').trim().toLowerCase();
+            let visible=0;
+            rows.forEach(r=>{
+              const n = r.getAttribute('data-name')||'';
+              const e = r.getAttribute('data-email')||'';
+              const u = r.getAttribute('data-username')||'';
+              const show = !term || n.includes(term) || e.includes(term) || u.includes(term);
+              r.style.display = show ? '' : 'none';
+              if (show) visible++;
+            });
+            if (total) total.textContent = String(visible);
+          }
+          q?.addEventListener('input', filter, {passive:true});
+
+          // Copy visible emails
+          document.getElementById('btnCopyEmails')?.addEventListener('click', async ()=>{
+            const emails = rows.filter(r=>r.style.display!=='none')
+              .map(r=>r.getAttribute('data-email')||'').filter(Boolean);
+            try{
+              await navigator.clipboard.writeText(emails.join(', '));
+              const btn = document.getElementById('btnCopyEmails'); const old = btn.innerHTML;
+              btn.innerHTML = '<i class="bi bi-clipboard-check-fill"></i> Copied!';
+              setTimeout(()=> btn.innerHTML = old, 1200);
+            }catch{ alert('Cannot copy to clipboard.'); }
+          });
+
+          // Kick flow
+          let kickTarget = null;
+          const kickModalEl = document.getElementById('kickModal');
+          const kickModal = bootstrap.Modal.getOrCreateInstance(kickModalEl);
+          const kickNameEl = document.getElementById('kickName');
+          const kickBtn = document.getElementById('kickConfirmBtn');
+
+          document.addEventListener('click', (e)=>{
+            const btn = e.target.closest('[data-kick]');
+            if(!btn) return;
+            const payload = JSON.parse(btn.getAttribute('data-kick')||'{}');
+            kickTarget = payload;
+            kickNameEl.textContent = payload.fullName || 'this student';
+            kickModal.show();
+          });
+
+          function getAntiForgery(){
+            const form = document.getElementById('kickForm');
+            const input = form.querySelector('input[name="__RequestVerificationToken"]');
+            return input?.value || '';
+          }
+
+          kickBtn.addEventListener('click', async ()=>{
+            if(!kickTarget || !kickTarget.userId) return;
+            try{
+              const resp = await fetch('@Url.Action("Kick", "Classrooms")', {
+                method:'POST',
+                headers: {
+                  'Content-Type':'application/json',
+                  'RequestVerificationToken': getAntiForgery()
+                },
+                body: JSON.stringify({ classId: classId, userId: kickTarget.userId }),
+                credentials:'same-origin'
+              });
+              if(!resp.ok){ throw new Error('Kick failed'); }
+              const ok = (await resp.json())?.ok;
+              if(!ok) throw new Error('Kick failed');
+              const row = Array.from(document.querySelectorAll('#rosterTable tbody tr'))
+                .find(tr => (tr.querySelector('[data-kick]')?.getAttribute('data-kick')||'').includes(kickTarget.userId));
+              if(row){ row.remove(); filter(); }
+              kickModal.hide();
+            }catch(err){
+              console.error(err);
+              alert('Cannot remove student.');
+            }
+          });
+        })();
+    </script>
+}

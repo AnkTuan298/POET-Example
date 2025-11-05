@@ -180,6 +180,7 @@ namespace POETWeb.Controllers
 
 
             var items = await q.AsNoTracking().ToListAsync();
+            ViewBag.ClassId = cls.Id;
             ViewBag.ClassName = cls.Name;
             ViewBag.ClassCode = cls.ClassCode;
             return View(items);
@@ -195,6 +196,27 @@ namespace POETWeb.Controllers
             return PartialView("_DetailsModal", cls);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> Kick([FromBody] KickDto dto)
+        {
+            var me = await _userManager.GetUserAsync(User);
+            var cls = await _db.Classrooms.FirstOrDefaultAsync(c => c.Id == dto.ClassId && c.TeacherId == me!.Id);
+            if (cls == null) return Forbid();
+
+            var enr = await _db.Enrollments.FirstOrDefaultAsync(e => e.ClassId == dto.ClassId && e.UserId == dto.UserId);
+            if (enr == null) return NotFound(new { ok = false, message = "Student not enrolled." });
+
+            if (!string.Equals(enr.RoleInClass, "Student", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { ok = false, message = "Cannot remove non-student member." });
+
+            _db.Enrollments.Remove(enr);
+            await _db.SaveChangesAsync();
+            return Json(new { ok = true });
+        }
+
+        public sealed class KickDto { public int ClassId { get; set; } public string UserId { get; set; } = ""; }
 
         // ===== STUDENT ZONE =====
 

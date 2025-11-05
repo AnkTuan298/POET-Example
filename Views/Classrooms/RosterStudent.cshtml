@@ -1,37 +1,220 @@
 ﻿@model IEnumerable<dynamic>
 @{
-    ViewData["Title"] = "Class Roster";
+    ViewData["Title"] = "Class roster";
+    var className = (string)(ViewBag.ClassName ?? "Class");
+    var classCode = (string)(ViewBag.ClassCode ?? "");
+    var classId = (int)(ViewBag.ClassId ?? 0);
 }
-<h2>@ViewBag.ClassName (@ViewBag.ClassCode)</h2>
-<p class="text-muted">List of students in this class</p>
 
-<table class="table table-bordered mt-3 align-middle">
-    <thead class="table-light">
-        <tr>
-            <th style="width:48px;"></th>
-            <th>Full Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Account Code</th>
-            <th>Joined At</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var s in Model)
-        {
-            var avatar = string.IsNullOrWhiteSpace((string?)s.AvatarUrl)
-            ? "https://via.placeholder.com/72?text=🙂"
-            : (string)s.AvatarUrl;
-            <tr>
-                <td><img src="@avatar" alt="avatar" class="avatar-sm" /></td>
-                <td>@s.FullName</td>
-                <td>@s.Email</td>
-                <td>@s.PhoneNumber</td>
-                <td>@s.AccountCode</td>
-                <td>@(s.JoinedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"))</td>
-            </tr>
+<!-- Header -->
+<div class="rs-header">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="py-3">
+            <div class="small opacity-75">Student • Roster</div>
+            <h4 class="mb-0">@className <span class="rs-code">• @classCode</span></h4>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-soft-slate btn-sm"
+               asp-controller="Materials" asp-action="Index" asp-route-classId="@classId">
+                <i class="bi bi-files"></i> Materials
+            </a>
+            <a class="btn btn-soft-slate btn-sm"
+               asp-controller="Assignment" asp-action="Student" asp-route-classId="@classId">
+                <i class="bi bi-clipboard2-check"></i> Assignments
+            </a>
+            <a class="btn btn-outline-light btn-sm"
+               asp-controller="Student" asp-action="Index">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container py-3 section-shell">
+    <!-- Toolbar -->
+    <div class="rs-toolbar">
+        <div class="input-group rs-search">
+            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+            <input id="q" type="text" class="form-control" placeholder="Search name or email…">
+        </div>
+        <div class="text-muted small">Total: <strong id="totalCount">@Model.Count()</strong></div>
+    </div>
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="rs-empty">
+            <div class="rs-empty__icon"><i class="bi bi-people"></i></div>
+            <div>No students yet.</div>
+            <div class="text-muted small">When classmates join, they will appear here.</div>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle rs-table" id="rosterTable">
+                <thead>
+                    <tr>
+                        <th style="width:56px"></th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th class="text-nowrap">Phone</th>
+                        <th class="text-nowrap">Account</th>
+                        <th class="text-nowrap">Joined</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model)
+                    {
+                        string fullName = (string?)s.FullName ?? "(unknown)";
+                        string email = (string?)s.Email ?? "";
+                        string phone = (string?)s.PhoneNumber ?? "";
+                        string account = (string?)s.AccountCode ?? "";
+                        string avatar = string.IsNullOrWhiteSpace((string?)s.AvatarUrl)
+                        ? Url.Content("~/images/avatar-default.png")
+                        : (string)s.AvatarUrl;
+                        DateTime joined = (s.JoinedAt is DateTime dt) ? dt : DateTime.UtcNow;
+                        <tr data-name="@fullName.ToLowerInvariant()" data-email="@email.ToLowerInvariant()">
+                            <td>
+                                <img src="@avatar"
+                                     alt="avatar" class="rs-avatar__img"
+                                     loading="lazy"
+                                     onerror="this.onerror=null;this.src='@Url.Content("~/images/avatar-default.png")'">
+                            </td>
+                            <td class="fw-semibold text-truncate" title="@fullName">@fullName</td>
+                            <td class="text-truncate">
+                                <a class="rs-mail" href="mailto:@email" title="@email">@email</a>
+                            </td>
+                            <td class="text-muted text-truncate" title="@phone">@phone</td>
+                            <td><code>@account</code></td>
+                            <td class="text-muted">@joined.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<style>
+    /* Header */
+    .rs-header {
+        background: linear-gradient(90deg,#6366f1,#22d3ee);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(99,102,241,.15)
+    }
+
+    .rs-code {
+        opacity: .9;
+        font-weight: 600
+    }
+
+    /* Shell */
+    .section-shell {
+        max-width: 1100px;
+        margin: 0 auto
+    }
+
+    /* Toolbar */
+    .rs-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: .75rem
+    }
+
+    .rs-search {
+        min-width: 280px;
+        max-width: 520px
+    }
+
+    /* Table */
+    .rs-table thead th {
+        background: #fafbff;
+        border-bottom: 1px solid #eef2f7;
+        font-weight: 700
+    }
+
+    .rs-table tbody tr {
+        transition: background .12s ease
+    }
+
+        .rs-table tbody tr:hover {
+            background: #fbfcff
         }
-    </tbody>
-</table>
 
-<a class="btn btn-secondary mt-3" asp-action="Details" asp-route-id="@ViewBag.ClassId">Back</a>
+    .rs-avatar__img {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        object-fit: cover;
+        display: block
+    }
+
+    /* Links */
+    .rs-mail {
+        text-decoration: none
+    }
+
+        .rs-mail:hover {
+            text-decoration: underline
+        }
+
+    /* Empty state */
+    .rs-empty {
+        text-align: center;
+        padding: 2.25rem;
+        border-radius: 14px;
+        background: #fbfcff;
+        border: 1px solid #eef2f7
+    }
+
+    .rs-empty__icon {
+        width: 48px;
+        height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        margin-bottom: .5rem;
+        background: linear-gradient(120deg,#eef2ff,#e0f2fe);
+        color: #4f46e5;
+        font-size: 1.25rem
+    }
+
+    /* Reused button */
+    .btn-soft-slate {
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        color: #1f2937
+    }
+
+        .btn-soft-slate:hover {
+            background: #eef2f7
+        }
+</style>
+
+@section Scripts {
+    <script>
+        (function(){
+          const q = document.getElementById('q');
+          const rows = Array.from(document.querySelectorAll('#rosterTable tbody tr'));
+          const total = document.getElementById('totalCount');
+
+          function filter(){
+            const term = (q?.value || '').trim().toLowerCase();
+            let visible = 0;
+            rows.forEach(r=>{
+              const n = r.getAttribute('data-name')  || '';
+              const e = r.getAttribute('data-email') || '';
+              const show = !term || n.includes(term) || e.includes(term);
+              r.style.display = show ? '' : 'none';
+              if (show) visible++;
+            });
+            if (total) total.textContent = String(visible);
+          }
+          q?.addEventListener('input', filter, {passive:true});
+        })();
+    </script>
+}

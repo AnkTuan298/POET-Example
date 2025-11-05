@@ -9,7 +9,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace POETWeb.Controllers
 {
-    [Authorize(Roles = "Student")]
+    [Authorize]
     public class StudentController : Controller
     {
         private readonly ApplicationDbContext _db;
@@ -223,7 +223,6 @@ namespace POETWeb.Controllers
             // Trả đúng tên partial view của cậu
             return PartialView("_StudentQuickView", vm);
         }
-
 
         [HttpGet]
         public IActionResult Classes() => RedirectToAction(nameof(Index));

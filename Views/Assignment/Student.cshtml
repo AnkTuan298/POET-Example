@@ -5,109 +5,145 @@
     var hasClass = Model?.ClassId != null;
 }
 
-<div class="container py-3">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <div>
-            <h3 class="mb-1">
-                Assignments
+<!-- ===== Header ===== -->
+<div class="asss-header">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="py-3">
+            <div class="small opacity-75">Assignments</div>
+            <h4 class="mb-0">
                 @if (hasClass)
                 {
-                    <text>• @Model!.ClassName</text>
-                }
-            </h3>
-            <div class="text-muted">
-                @if (hasClass)
-                {
-                    <text>Class ID: @Model!.ClassId</text>
+                    <text>@Model!.ClassName</text>
                 }
                 else
                 {
+
                     <text>Across your joined classes</text>
                 }
-            </div>
+            </h4>
         </div>
-        <div class="d-flex gap-2">
-            <a asp-controller="Student" asp-action="Index" class="btn btn-soft">Back</a>
+        <div>
+            <a asp-controller="Student" asp-action="Index" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container py-3 section-shell">
+    <!-- ===== Toolbar ===== -->
+    <div class="asss-toolbar">
+        <div class="input-group asss-search">
+            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+            <input id="assSearch" type="text" class="form-control" placeholder="Search by title or class…">
+        </div>
+
+        <div class="asss-filters">
+            <button class="pill pill-gray active" data-status="all">All</button>
+            <button class="pill pill-indigo" data-status="open"><i class="bi bi-unlock"></i> Open</button>
+            <button class="pill pill-amber" data-status="closed"><i class="bi bi-lock"></i> Closed</button>
+            <div class="text-muted small ms-2">Total: <strong id="assCount">@((Model?.Items?.Count) ?? 0)</strong></div>
         </div>
     </div>
 
-    <div class="section-shell">
+    <!-- ===== List ===== -->
+    <div id="assList" class="row g-3">
         @if (Model?.Items == null || !Model.Items.Any())
         {
-            <div class="alert alert-light border mb-0">
-                No assignments yet. Enjoy the peace while it lasts.
+            <div class="col-12">
+                <div class="asss-empty">
+                    <div class="asss-empty__icon"><i class="bi bi-journal-x"></i></div>
+                    <div>No assignments yet.</div>
+                    <div class="text-muted small">Enjoy the peace while it lasts.</div>
+                </div>
             </div>
         }
         else
         {
-            <div class="row g-3">
-                @foreach (var a in Model.Items)
+            @foreach (var a in Model.Items)
+            {
+                var typeText = a.Type switch
                 {
-                    var typeText = a.Type switch
-                    {
-                        AssignmentType.Mcq => "MCQ",
-                        AssignmentType.Essay => "Essay",
-                        _ => "Mixed"
-                    };
-                    var badgeCls = a.Type switch
-                    {
-                        AssignmentType.Mcq => "badge-type badge-type-mcq",
-                        AssignmentType.Essay => "badge-type badge-type-essay",
-                        _ => "badge-type badge-type-mixed"
-                    };
+                    AssignmentType.Mcq => "MCQ",
+                    AssignmentType.Essay => "Essay",
+                    _ => "Mixed"
+                };
+                var badgeCls = a.Type switch
+                {
+                    AssignmentType.Mcq => "badge-type badge-type-mcq",
+                    AssignmentType.Essay => "badge-type badge-type-essay",
+                    _ => "badge-type badge-type-mixed"
+                };
 
-                    <div class="col-12 col-md-6 col-lg-4">
-                        <div class="ass-card h-100 card-hover card-click"
-                             role="button" tabindex="0" aria-label="Open assignment details"
-                             data-id="@a.Id"
-                             data-title="@a.Title"
-                             data-type="@typeText"
-                             data-typecls="@badgeCls"
-                             data-class="@a.ClassName"
-                             data-status="@a.Status"
-                             data-due="@(a.DueAt.HasValue? a.DueAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "No due date")"
-                             data-duration="@(a.DurationMinutes)"
-                             data-max="@a.MaxAttempts"
-                             data-used="@a.AttemptsUsed"
-                             data-desc="@a.Description"
-                             data-start-url="@Url.Action("Take", "Assignment", new { id = a.Id, index = 0 })"
-                             data-history-url="@Url.Action("History", "Assignment", new { id = a.Id })">
-                            <div class="ass-card__head"></div>
-                            <div class="ass-card__body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="ass-card__title d-flex align-items-center gap-2">
-                                        @a.Title
-                                        <span class="@badgeCls">@typeText</span>
-                                    </div>
-                                    <span class="badge badge-soft">@a.Status</span>
+                var statusLower = (a.Status ?? "").Trim().ToLowerInvariant();
+
+                <div class="col-12 col-md-6 col-lg-4 ass-card-col"
+                     data-title="@a.Title.ToLowerInvariant()"
+                     data-class="@a.ClassName.ToLowerInvariant()"
+                     data-status="@statusLower">
+                    <div class="ass-card h-100 card-hover card-click"
+                         role="button" tabindex="0" aria-label="Open assignment details"
+                         data-id="@a.Id"
+                         data-title="@a.Title"
+                         data-type="@typeText"
+                         data-typecls="@badgeCls"
+                         data-class="@a.ClassName"
+                         data-status="@a.Status"
+                         data-due="@(a.DueAt.HasValue? a.DueAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "No due date")"
+                         data-duration="@a.DurationMinutes"
+                         data-max="@a.MaxAttempts"
+                         data-used="@a.AttemptsUsed"
+                         data-desc="@a.Description"
+                         data-start-url="@Url.Action("Take", "Assignment", new { id = a.Id, index = 0 })"
+                         data-history-url="@Url.Action("History", "Assignment", new { id = a.Id })">
+                        <div class="ass-card__head"></div>
+                        <div class="ass-card__body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="ass-card__title d-flex align-items-center gap-2">
+                                    <i class="bi bi-clipboard-check text-slate-500"></i> @a.Title
+                                    <span class="@badgeCls" title="Type">@typeText</span>
                                 </div>
+                                <span class="badge badge-soft" title="Status">@a.Status</span>
+                            </div>
 
-                                <div class="ass-card__meta mt-1">
-                                    <i class="bi bi-collection"></i>
-                                    <span class="ms-1">@a.ClassName</span>
+                            <div class="ass-card__meta mt-1">
+                                <i class="bi bi-collection"></i>
+                                <span class="ms-1">@a.ClassName</span>
 
-                                    @if (a.DueAt.HasValue)
-                                    {
-                                        <span class="ms-3">
-                                            <i class="bi bi-clock"></i>
-                                            Due: @a.DueAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
-                                        </span>
+                                @if (a.DueAt.HasValue)
+                                {
+                                    <span class="ms-3">
+                                        <i class="bi bi-clock"></i>
+                                        Due: @a.DueAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="ms-3"><i class="bi bi-clock-history"></i> No due date</span>
+                                }
+                            </div>
+
+                            <div class="ass-card__footer mt-3">
+                                <div class="small text-muted">
+                                    Attempts @a.AttemptsUsed / @a.MaxAttempts
+                                </div>
+                                <div class="asss-progress mt-1" role="progressbar" aria-valuemin="0" aria-valuemax="@a.MaxAttempts" aria-valuenow="@a.AttemptsUsed">
+                                    @{
+                                        var max = a.MaxAttempts <= 0 ? 1 : a.MaxAttempts;
+                                        var percent = Math.Clamp((int)Math.Round(100.0 * a.AttemptsUsed / max), 0, 100);
                                     }
-                                    else
-                                    {
-                                        <span class="ms-3"><i class="bi bi-clock-history"></i> No due date</span>
-                                    }
+                                    <div class="asss-progress__bar" style="width:@percent%"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                }
-            </div>
+                </div>
+            }
         }
     </div>
 </div>
 
-@* MODAL: Assignment details *@
+@* ===== Modal: Assignment details ===== *@
 <div class="modal fade" id="assModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content shadow-lg border-0">
@@ -166,7 +202,7 @@
             </div>
 
             <div class="modal-footer d-flex justify-content-between">
-                <div class="small" id="assModalHint">Review details before you start.</div>
+                <div class="small text-muted" id="assModalHint">Review details before you start.</div>
                 <div class="d-flex gap-2">
                     <a id="assModalHistoryBtn" href="#" class="btn btn-outline-secondary">
                         <i class="bi bi-journal-text"></i> Test history
@@ -182,13 +218,144 @@
 </div>
 
 <style>
+    /* Shell */
+    .asss-header {
+        background: linear-gradient(90deg,#6366f1,#22d3ee);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(99,102,241,.15)
+    }
+
+    .section-shell {
+        max-width: 1100px;
+        margin: 0 auto
+    }
+
+    /* Toolbar */
+    .asss-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: .75rem
+    }
+
+    .asss-search {
+        min-width: 280px;
+        max-width: 460px
+    }
+
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        border-radius: 999px;
+        padding: .25rem .7rem;
+        font-size: .82rem;
+        font-weight: 600;
+        border: 1px solid transparent;
+        background: #f3f4f6;
+        color: #374151;
+        cursor: pointer
+    }
+
+        .pill.active {
+            box-shadow: 0 0 0 2px rgba(99,102,241,.15) inset
+        }
+
+    .pill-gray {
+        background: #f3f4f6;
+        border-color: #e5e7eb
+    }
+
+    .pill-indigo {
+        background: #eef2ff;
+        color: #4f46e5;
+        border-color: #d9ddff
+    }
+
+    .pill-amber {
+        background: #fff7ed;
+        color: #b45309;
+        border-color: #ffd2a5
+    }
+
+    /* Cards */
+    .ass-card {
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(0,0,0,.04);
+        transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease
+    }
+
+        .ass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(24,39,75,.10);
+            border-color: #e6e9f5
+        }
+
+    .ass-card__head {
+        height: 6px;
+        background: linear-gradient(90deg,#6366f1,#22d3ee)
+    }
+
+    .ass-card__body {
+        padding: 14px
+    }
+
+    .ass-card__title {
+        font-weight: 700;
+        color: #111827;
+        letter-spacing: .2px
+    }
+
+    .ass-card__meta {
+        color: #6b7280;
+        font-size: .92rem
+    }
+
+    .ass-card__footer .asss-progress {
+        height: 6px;
+        border-radius: 6px;
+        background: #f3f4f6;
+        overflow: hidden
+    }
+
+    .asss-progress__bar {
+        height: 100%;
+        background: linear-gradient(90deg,#22d3ee,#38bdf8)
+    }
+
     .card-hover {
-        transition: transform .12s ease, box-shadow .12s ease;
+        transition: transform .12s ease, box-shadow .12s ease
     }
 
         .card-hover:hover {
             transform: translateY(-4px);
-            box-shadow: 0 10px 24px rgba(0,0,0,.12);
+            box-shadow: 0 10px 24px rgba(0,0,0,.12)
+        }
+
+    .badge-soft {
+        background: #eef2ff;
+        color: #4f46e5
+    }
+
+    .btn-soft {
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb
+    }
+
+    .btn-grad-sky {
+        background: linear-gradient(90deg,#38bdf8,#22d3ee);
+        color: #fff;
+        border: none
+    }
+
+        .btn-grad-sky:hover {
+            filter: brightness(.95);
+            color: #fff
         }
 
     .badge-type {
@@ -196,98 +363,128 @@
         padding: .2rem .5rem;
         font-size: .75rem;
         border-radius: .5rem;
-        color: #fff;
+        color: #fff
     }
 
     .badge-type-mcq {
-        background: linear-gradient(90deg,#5b8cff,#7aa6ff);
+        background: linear-gradient(90deg,#5b8cff,#7aa6ff)
     }
 
     .badge-type-essay {
-        background: linear-gradient(90deg,#8b5cf6,#a78bfa);
+        background: linear-gradient(90deg,#8b5cf6,#a78bfa)
     }
 
     .badge-type-mixed {
-        background: linear-gradient(90deg,#f59e0b,#ef4444);
+        background: linear-gradient(90deg,#f59e0b,#ef4444)
     }
 
+    /* Empty */
+    .asss-empty {
+        text-align: center;
+        padding: 2rem;
+        border-radius: 14px;
+        background: #fbfcff;
+        border: 1px solid #eef2f7
+    }
+
+    .asss-empty__icon {
+        width: 48px;
+        height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        margin-bottom: .5rem;
+        background: linear-gradient(120deg,#eef2ff,#e0f2fe);
+        color: #4f46e5;
+        font-size: 1.25rem
+    }
+
+    /* Modal info tiles */
     .info-tile {
         background: #fafafa;
         border: 1px solid #eee;
         border-radius: .75rem;
-        padding: .75rem 1rem;
+        padding: .75rem 1rem
     }
 
     .info-label {
         font-size: .8rem;
-        color: #6b7280;
+        color: #6b7280
     }
 
     .info-value {
         font-weight: 600;
-        margin-top: .15rem;
+        margin-top: .15rem
     }
 
-    .btn-grad-sky {
-        background: linear-gradient(90deg,#38bdf8,#22d3ee);
-        color: #fff;
-        border: none;
-    }
-
-        .btn-grad-sky:hover {
-            filter: brightness(.95);
-            color: #fff;
-        }
-
-    .btn-soft {
-        background: #f3f4f6;
-        border: 1px solid #e5e7eb;
-    }
-
-    .badge-soft {
-        background: #eef2ff;
-        color: #4f46e5;
-    }
-
-    /* Disabled state cho <a> đóng vai trò button */
+    /* Disabled <a> as button */
     .btn-disabled {
         pointer-events: none;
-        opacity: .55;
-    }
-
-    .text-danger-strong {
-        color: #dc2626;
-        font-weight: 600;
+        opacity: .55
     }
 </style>
 
 @section Scripts {
     <script>
-        // Mở modal từ card
+        /* ===== Client-side search + filter ===== */
+        (function(){
+            const q = document.getElementById('assSearch');
+            const rows = Array.from(document.querySelectorAll('#assList .ass-card-col'));
+            const count = document.getElementById('assCount');
+            let filterStatus = 'all';
+
+            function visible(r){
+                const t = r.getAttribute('data-title') || '';
+                const c = r.getAttribute('data-class') || '';
+                const s = r.getAttribute('data-status') || '';
+                const term = (q.value || '').trim().toLowerCase();
+                const matchText = !term || t.includes(term) || c.includes(term);
+                const matchStatus = filterStatus === 'all' || s === filterStatus;
+                return matchText && matchStatus;
+            }
+            function apply(){
+                let v = 0;
+                rows.forEach(r=>{
+                    const show = visible(r);
+                    r.style.display = show ? '' : 'none';
+                    if(show) v++;
+                });
+                if(count) count.textContent = String(v);
+            }
+            q?.addEventListener('input', apply, {passive:true});
+
+            document.querySelectorAll('.asss-filters .pill').forEach(btn=>{
+                btn.addEventListener('click', ()=>{
+                    document.querySelectorAll('.asss-filters .pill').forEach(b=>b.classList.remove('active'));
+                    btn.classList.add('active');
+                    filterStatus = btn.getAttribute('data-status') || 'all';
+                    apply();
+                });
+            });
+
+            apply();
+        })();
+
+        /* ===== Open modal from card ===== */
         function openAssModalFromEl(el) {
-            var title   = el.dataset.title || 'Assignment';
-            var type    = el.dataset.type || '—';
-            var typeCls = el.dataset.typecls || 'badge-type';
-            var cls     = el.dataset.class || '—';
-            var status  = (el.dataset.status || '—').trim();
-            var due     = el.dataset.due || '—';
-            var maxRaw  = el.dataset.max;
-            var usedRaw = el.dataset.used;
-            var max     = parseInt(maxRaw, 10);     // NaN nếu rỗng
-            var used    = parseInt(usedRaw, 10);
-            if (isNaN(max)) max = 0;
-            if (isNaN(used)) used = 0;
+            const title   = el.dataset.title || 'Assignment';
+            const type    = el.dataset.type || '—';
+            const typeCls = el.dataset.typecls || 'badge-type';
+            const cls     = el.dataset.class || '—';
+            const status  = (el.dataset.status || '—').trim();
+            const due     = el.dataset.due || '—';
+            let   max     = parseInt(el.dataset.max, 10);     if (isNaN(max))  max  = 0;
+            let   used    = parseInt(el.dataset.used, 10);    if (isNaN(used)) used = 0;
+            const desc    = el.dataset.desc || '—';
+            const start   = el.dataset.startUrl || '#';
+            const hist    = el.dataset.historyUrl || '#';
+            const dur     = el.dataset.duration;
 
-            var desc    = el.dataset.desc || '—';
-            var start   = el.dataset.startUrl || '#';
-            var hist    = el.dataset.historyUrl || '#';
-            var dur     = el.dataset.duration;
-
-            // Fill text
             document.getElementById('assModalTitle').innerText = title;
             document.getElementById('assModalSubTitle').innerText = 'Preview assignment details';
 
-            var typeBadge = document.getElementById('assModalTypeBadge');
+            const typeBadge = document.getElementById('assModalTypeBadge');
             typeBadge.className = typeCls;
             typeBadge.innerText = type;
 
@@ -298,46 +495,36 @@
             document.getElementById('assModalMax').innerText = max ? max : '—';
             document.getElementById('assModalDesc').innerText = (desc && desc.trim().length) ? desc : '—';
 
-            // Buttons
-            var startBtn = document.getElementById('assModalStartBtn');
-            var hintEl   = document.getElementById('assModalHint');
+            const startBtn = document.getElementById('assModalStartBtn');
+            const hintEl   = document.getElementById('assModalHint');
             startBtn.setAttribute('href', start);
             document.getElementById('assModalHistoryBtn').setAttribute('href', hist);
 
-            // Điều kiện cho phép Start:
-            // 1) Status phải Open
-            // 2) Chưa chạm trần attempts: max == 0 coi như không giới hạn; nếu >0 thì used < max
-            var statusOk = status.toLowerCase() === 'open';
-            var attemptsOk = (max <= 0) || (used < max);
-            var canStart = statusOk && attemptsOk;
+            // Conditions to allow Start:
+            const statusOk = status.toLowerCase() === 'open';
+            const attemptsOk = (max <= 0) || (used < max);
+            const canStart = statusOk && attemptsOk;
 
-            // Cài đặt UI
             function disableStart(reason){
                 startBtn.classList.add('btn-disabled');
                 startBtn.setAttribute('aria-disabled', 'true');
                 startBtn.setAttribute('tabindex', '-1');
                 hintEl.classList.remove('text-muted');
-                hintEl.classList.add('text-danger-strong');
+                hintEl.classList.add('text-danger');
                 hintEl.innerText = reason;
-                // chặn click dự phòng
                 startBtn.addEventListener('click', preventStartWhenDisabled, { once: true });
             }
             function enableStart(){
                 startBtn.classList.remove('btn-disabled');
                 startBtn.removeAttribute('aria-disabled');
                 startBtn.removeAttribute('tabindex');
-                hintEl.classList.remove('text-danger-strong');
+                hintEl.classList.remove('text-danger');
                 hintEl.classList.add('text-muted');
-                // hiển thị attempts nếu có số liệu
-                if (max > 0) {
-                    hintEl.innerText = 'Attempts: ' + used + ' / ' + max + '. Review details before you start.';
-                } else {
-                    hintEl.innerText = 'Review details before you start.';
-                }
+                hintEl.innerText = max > 0 ? ('Attempts: ' + used + ' / ' + max + '. Review details before you start.') : 'Review details before you start.';
             }
 
             if (!statusOk) {
-                var reason = status.toLowerCase() === 'closed'
+                const reason = status.toLowerCase() === 'closed'
                     ? 'This assignment is closed. You cannot start a new attempt.'
                     : 'This assignment is not open yet.';
                 disableStart(reason);
@@ -357,7 +544,6 @@
             }
         }
 
-        // Bind cards
         document.querySelectorAll('.card-click').forEach(function(card){
             card.addEventListener('click', function(){ openAssModalFromEl(this); });
             card.addEventListener('keydown', function(e){
@@ -365,56 +551,56 @@
             });
         });
 
-        // === Test History stacking (giữ nguyên) ===
+        /* ===== History modal stacking (giữ nguyên ý tưởng của cậu) ===== */
         document.addEventListener('click', async function (e) {
-          const btn = e.target.closest('#assModalHistoryBtn');
-          if (!btn) return;
+            const btn = e.target.closest('#assModalHistoryBtn');
+            if (!btn) return;
 
-          e.preventDefault();
-          const url = btn.getAttribute('href');
-          if (!url || url === '#') return;
+            e.preventDefault();
+            const url = btn.getAttribute('href');
+            if (!url || url === '#') return;
 
-          try {
-            const resp = await fetch(url, { credentials: 'same-origin' });
-            const html = await resp.text();
+            try {
+                const resp = await fetch(url, { credentials: 'same-origin' });
+                const html = await resp.text();
 
-            const old = document.getElementById('testHistoryModal');
-            if (old) old.remove();
+                const old = document.getElementById('testHistoryModal');
+                if (old) old.remove();
 
-            const wrap = document.createElement('div');
-            wrap.innerHTML = html;
-            const injected = wrap.firstElementChild;
-            if (!injected) return;
-            document.body.appendChild(injected);
+                const wrap = document.createElement('div');
+                wrap.innerHTML = html;
+                const injected = wrap.firstElementChild;
+                if (!injected) return;
+                document.body.appendChild(injected);
 
-            const openCount = document.querySelectorAll('.modal.show').length;
-            const zBase = 1050 + (10 * openCount);
-            const modalEl = document.getElementById('testHistoryModal');
-            modalEl.style.zIndex = zBase;
+                const openCount = document.querySelectorAll('.modal.show').length;
+                const zBase = 1050 + (10 * openCount);
+                const modalEl = document.getElementById('testHistoryModal');
+                modalEl.style.zIndex = zBase;
 
-            const m = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false, focus: false });
-            m.show();
+                const m = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false, focus: false });
+                m.show();
 
-            setTimeout(() => {
-              const backs = document.querySelectorAll('.modal-backdrop');
-              const newest = backs[backs.length - 1];
-              if (newest) {
-                newest.style.zIndex = (zBase - 1).toString();
-                newest.dataset.for = 'testHistory';
-              }
-            }, 0);
+                setTimeout(() => {
+                    const backs = document.querySelectorAll('.modal-backdrop');
+                    const newest = backs[backs.length - 1];
+                    if (newest) {
+                        newest.style.zIndex = (zBase - 1).toString();
+                        newest.dataset.for = 'testHistory';
+                    }
+                }, 0);
 
-            modalEl.addEventListener('hidden.bs.modal', () => {
-              const bd = document.querySelector('.modal-backdrop[data-for="testHistory"]');
-              if (bd) bd.remove();
-              document.body.classList.add('modal-open');
-              const parent = document.getElementById('assModal');
-              if (parent) parent.focus();
-            }, { once: true });
+                modalEl.addEventListener('hidden.bs.modal', () => {
+                    const bd = document.querySelector('.modal-backdrop[data-for="testHistory"]');
+                    if (bd) bd.remove();
+                    document.body.classList.add('modal-open');
+                    const parent = document.getElementById('assModal');
+                    if (parent) parent.focus();
+                }, { once: true });
 
-          } catch (err) {
-            console.error('Cannot open Test History modal:', err);
-          }
+            } catch (err) {
+                console.error('Cannot open Test History modal:', err);
+            }
         });
     </script>
 }

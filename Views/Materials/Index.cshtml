@@ -5,200 +5,513 @@
     var className = (string)ViewBag.ClassName;
     var classCode = (string)ViewBag.ClassCode;
     var isOwner = (ViewBag.IsOwner as bool?) ?? false;
+    var backTo = (string)ViewBag.BackTo ?? Url.Action("Index", "Teacher")!;
 }
 
-    <div class="container-xxl px-4 py-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h4 class="fw-bold text-slate-900 m-0">Materials • @className</h4>
-                <div class="text-slate-600 small">Class code: @classCode</div>
-            </div>
-            <div class="d-flex gap-2">
-                @if (isOwner)
-                {
-                    <a class="btn btn-grad-green" asp-action="Create" asp-route-classId="@classId">+ Add material</a>
-                }
-                <a class="btn btn-soft-slate" href="@ViewBag.BackTo">Back</a>
-            </div>
+<!-- Header gradient full width -->
+<div class="mat-header">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="py-3">
+            <div class="small opacity-75">Materials</div>
+            <h4 class="mb-0"> @className <span class="mat-code">• @classCode</span></h4>
         </div>
-
-        <div class="tdash-card p-3" id="materialsList">
-            @if (!Model.Any())
+        <div class="d-flex gap-2">
+            @if (isOwner)
             {
-                <div class="text-slate-600">No materials yet.</div>
+                <a class="btn btn-light btn-sm" asp-action="Create" asp-route-classId="@classId">
+                    <i class="bi bi-plus-lg"></i> Add material
+                </a>
             }
-            else
-            {
-                <div class="d-flex flex-column gap-3">
-                    @foreach (var m in Model)
+            <a class="btn btn-outline-light btn-sm" href="@backTo">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container py-3 section-shell">
+    <!-- Toolbar -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="input-group mat-search">
+            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+            <input id="q" type="text" class="form-control" placeholder="Search materials by title or description…">
+        </div>
+        <div class="text-muted small">Total: <strong id="matCount">@Model.Count()</strong></div>
+    </div>
+
+    <!-- List -->
+    <div id="materialsList" class="d-flex flex-column gap-3">
+        @if (!Model.Any())
+        {
+            <div class="mat-empty">
+                <div class="mat-empty__icon"><i class="bi bi-journal-text"></i></div>
+                <div>No materials yet</div>
+                <div class="text-muted small">Drop a link, upload a file, or paste an index to get started.</div>
+                <div class="mt-2">
+                    @if (isOwner)
                     {
-                        var rid = $"mat-{m.Id}";
-                        <article class="mat-card">
-                            <div class="mat-card__row">
-                                <button class="mat-card__toggle mat-toggle" type="button"
-                                        data-bs-toggle="collapse" data-bs-target="#@rid"
-                                        aria-expanded="false" aria-controls="@rid">
-                                    <i class="bi bi-chevron-down chev" aria-hidden="true"></i>
-                                </button>
+                        <a class="btn btn-grad-amber btn-sm" asp-action="Create" asp-route-classId="@classId">+ Add material</a>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            @foreach (var m in Model)
+            {
+                var rid = $"mat-{m.Id}";
+                var hasUrl = !string.IsNullOrWhiteSpace(m.ExternalUrl);
+                var hasIndex = !string.IsNullOrWhiteSpace(m.IndexContent);
+                var hasFile = !string.IsNullOrWhiteSpace(m.FileUrl);
 
-                                <div class="mat-card__main">
-                                    <div class="mat-card__title">@m.Title</div>
-                                    <div class="mat-card__meta">
-                                        <span class="text-slate-600">@m.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
-                                        @if (!string.IsNullOrWhiteSpace(m.Description))
-                                        {
-                                            <span class="dot">•</span>
-                                            <span class="text-slate-600">@m.Description</span>
-                                        }
-                                    </div>
-                                </div>
+                <article class="mat-card" data-title="@m.Title.ToLowerInvariant()" data-desc="@((m.Description ?? "").ToLowerInvariant())">
+                    <div class="mat-card__row">
+                        <button class="mat-card__toggle mat-action" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#@rid"
+                                aria-expanded="false" aria-controls="@rid" title="Expand">
+                            <i class="bi bi-chevron-down chev" aria-hidden="true"></i>
+                        </button>
 
-                                @if (isOwner)
+                        <div class="mat-card__main min-w-0">
+                            <div class="mat-card__title text-truncate" title="@m.Title">@m.Title</div>
+
+                            <div class="mat-card__meta">
+                                <span class="meta-chunk"><i class="bi bi-clock"></i> @m.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+
+                                @if (!string.IsNullOrWhiteSpace(m.Description))
                                 {
-                                    <div class="mat-card__actions">
-                                        <a class="btn btn-sm btn-grad-indigo mat-action me-1"
-                                           asp-action="Edit" asp-route-id="@m.Id">Edit</a>
-                                        <form asp-action="Delete" asp-route-id="@m.Id" method="post" class="d-inline mat-action">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-grad-rose"
-                                                    onclick="return confirm('Delete this material?');">
-                                                Delete
-                                            </button>
-                                        </form>
-                                    </div>
+                                    <span class="meta-chunk dot"></span>
+                                    <span class="meta-chunk text-truncate" title="@m.Description">
+                                        <i class="bi bi-card-text"></i> @m.Description
+                                    </span>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Right side: badges + actions on the same row -->
+                        <div class="mat-card__right">
+                            <div class="mat-badges d-none d-sm-flex">
+                                @if (hasUrl)
+                                {
+                                    <span class="pill pill-indigo"><i class="bi bi-play-btn"></i> Video/Link</span>
+                                }
+                                @if (hasIndex)
+                                {
+                                    <span class="pill pill-sky"><i class="bi bi-list-task"></i> Index</span>
+                                }
+                                @if (hasFile)
+                                {
+                                    <span class="pill pill-emerald"><i class="bi bi-paperclip"></i> File</span>
+                                }
+                                @if (!hasUrl && !hasIndex && !hasFile)
+                                {
+                                    <span class="pill pill-amber">Empty</span>
                                 }
                             </div>
 
-                            <div id="@rid" class="collapse mat-content" aria-labelledby="@rid">
-                                <div class="mat-card__body">
-                                    @{
-                                        bool printed = false;
-
-                                        // 1) VIDEO/URL
-                                        if (!string.IsNullOrWhiteSpace(m.ExternalUrl))
-                                        {
-                                            var youId = "";
-                                            try
-                                            {
-                                                var u = new Uri(m.ExternalUrl);
-                                                if (u.Host.Contains("youtube.com"))
-                                                    youId = System.Web.HttpUtility.ParseQueryString(u.Query).Get("v") ?? "";
-                                                else if (u.Host.Contains("youtu.be"))
-                                                    youId = u.AbsolutePath.Trim('/');
-                                            }
-                                            catch { }
-
-                                            if (!string.IsNullOrEmpty(youId))
-                                            {
-                                                <div class="ratio ratio-16x9 mb-3">
-                                                    <iframe src="https://www.youtube.com/embed/@youId"
-                                                            title="@m.Title" allowfullscreen loading="lazy"></iframe>
-                                                </div>
-                                            }
-                                            else
-                                            {
-                                                <a class="btn btn-soft-slate mb-2" href="@m.ExternalUrl" target="_blank" rel="noopener">Open link</a>
-                                            }
-                                            printed = true;
-                                        }
-
-                                        // 2) INDEX
-                                        if (!string.IsNullOrWhiteSpace(m.IndexContent))
-                                        {
-                                            if (printed)
-                                            {
-
-                                                <hr class="mat-divider" aria-hidden="true" />
-                                                ;
-                                            }
-                                            <div class="mat-index">@Html.Raw(m.IndexContent)</div>
-                                            printed = true;
-                                        }
-
-                                        // 3) FILE
-                                        if (!string.IsNullOrWhiteSpace(m.FileUrl))
-                                        {
-                                            if (printed)
-                                            {
-
-                                                <hr class="mat-divider" aria-hidden="true" />
-                                                ;
-                                            }
-                                            <div class="mb-1">
-                                                <a class="btn btn-soft-slate" href="@Url.Content(m.FileUrl)" target="_blank" rel="noopener">
-                                                    @(m.OriginalFileName ?? "Download file")
-                                                </a>
-                                                @if (m.FileSizeBytes.HasValue)
-                                                {
-                                                    <span class="text-muted small ms-2">(@String.Format("{0:N0} KB", m.FileSizeBytes.Value / 1024))</span>
-                                                }
-                                            </div>
-                                            printed = true;
-                                        }
-
-                                        if (!printed)
-                                        {
-                                            <span class="text-muted">No content.</span>
-                                        }
-                                    }
+                            @if (isOwner)
+                            {
+                                <div class="mat-card__actions">
+                                    <a class="btn btn-outline-primary btn-sm mat-action"
+                                       asp-action="Edit" asp-route-id="@m.Id">
+                                        <i class="bi bi-pencil-square"></i> Edit
+                                    </a>
+                                    <form asp-action="Delete" asp-route-id="@m.Id" method="post" class="d-inline mat-action">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                onclick="return confirm('Delete this material?');">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    </form>
                                 </div>
-                            </div>
-                        </article>
-                    }
-                </div>
-            }
-        </div>
-    </div>
+                            }
+                        </div>
+                    </div>
 
+                    <!-- Content -->
+                    <div id="@rid" class="collapse mat-content" aria-labelledby="@rid">
+                        <div class="mat-card__body">
+                            @{
+                                bool printed = false;
+
+                                // 1) VIDEO / URL (with YouTube embed)
+                                if (hasUrl)
+                                {
+                                    var youId = "";
+                                    try
+                                    {
+                                        var u = new Uri(m.ExternalUrl);
+                                        if (u.Host.Contains("youtube.com"))
+                                            youId = System.Web.HttpUtility.ParseQueryString(u.Query).Get("v") ?? "";
+                                        else if (u.Host.Contains("youtu.be"))
+                                            youId = u.AbsolutePath.Trim('/');
+                                    }
+                                    catch { /*skip*/ }
+
+                                    if (!string.IsNullOrEmpty(youId))
+                                    {
+                                        <div class="ratio ratio-16x9 mb-3">
+                                            <iframe src="https://www.youtube.com/embed/@youId"
+                                                    title="@m.Title" allowfullscreen loading="lazy"></iframe>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <a class="btn btn-soft-slate mb-2" href="@m.ExternalUrl" target="_blank" rel="noopener">
+                                            <i class="bi bi-box-arrow-up-right"></i> Open link
+                                        </a>
+                                    }
+                                    printed = true;
+                                }
+
+                                // 2) INDEX (HTML)
+                                if (hasIndex)
+                                {
+                                    if (printed)
+                                    {
+
+                                        <hr class="mat-divider" aria-hidden="true" />
+                                    }
+                                    <div class="mat-index">@Html.Raw(m.IndexContent)</div>
+                                    printed = true;
+                                }
+
+                                // 3) FILE
+                                if (hasFile)
+                                {
+                                    if (printed)
+                                    {
+
+                                        <hr class="mat-divider" aria-hidden="true" />
+                                    }
+                                    <div class="d-flex align-items-center flex-wrap gap-2">
+                                        <a class="btn btn-soft-slate" href="@Url.Content(m.FileUrl)" target="_blank" rel="noopener">
+                                            <i class="bi bi-download"></i> @(m.OriginalFileName ?? "Download file")
+                                        </a>
+                                        @if (m.FileSizeBytes.HasValue)
+                                        {
+                                            <span class="text-muted small">(@String.Format("{0:N0} KB", m.FileSizeBytes.Value / 1024))</span>
+                                        }
+                                    </div>
+                                    printed = true;
+                                }
+
+                                if (!printed)
+                                {
+                                    <span class="text-muted">No content.</span>
+                                }
+                            }
+                        </div>
+                    </div>
+                </article>
+            }
+        }
+    </div>
+</div>
+
+<style>
+    /* ===== Header ===== */
+    .mat-header {
+        background: linear-gradient(90deg,#6366f1,#22d3ee);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(99,102,241,.15);
+        margin-bottom: .25rem;
+    }
+
+    .mat-code {
+        font-weight: 500;
+        opacity: .9
+    }
+
+    .section-shell {
+        max-width: 1100px;
+        margin: 0 auto
+    }
+
+    /* ===== Buttons / pills ===== */
+    .btn-soft-slate {
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        color: #1f2937
+    }
+
+        .btn-soft-slate:hover {
+            background: #eef2f7
+        }
+
+    .btn-grad-amber {
+        background: linear-gradient(90deg,#f59e0b,#ef4444);
+        color: #fff;
+        border: none
+    }
+
+        .btn-grad-amber:hover {
+            filter: brightness(.95);
+            color: #fff
+        }
+
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        border-radius: 999px;
+        padding: .15rem .55rem;
+        font-size: .78rem;
+        font-weight: 600;
+        border: 1px solid transparent
+    }
+
+    .pill-indigo {
+        background: #eef2ff;
+        color: #4f46e5;
+        border-color: #d9ddff
+    }
+
+    .pill-sky {
+        background: #e0f2fe;
+        color: #0369a1;
+        border-color: #b4e6fb
+    }
+
+    .pill-emerald {
+        background: #e9fff3;
+        color: #0f766e;
+        border-color: #bff3d6
+    }
+
+    .pill-amber {
+        background: #fff7ed;
+        color: #b45309;
+        border-color: #ffd2a5
+    }
+
+    /* ===== Search ===== */
+    .mat-search {
+        min-width: 280px;
+        max-width: 480px
+    }
+
+    /* ===== Empty state ===== */
+    .mat-empty {
+        text-align: center;
+        padding: 2.25rem;
+        border-radius: 14px;
+        background: #fbfcff;
+        border: 1px solid #eef2f7
+    }
+
+    .mat-empty__icon {
+        width: 48px;
+        height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        margin-bottom: .5rem;
+        background: linear-gradient(120deg,#eef2ff,#e0f2fe);
+        color: #4f46e5;
+        font-size: 1.25rem
+    }
+
+    /* ===== Material cards ===== */
+    .mat-card {
+        border: 1px solid #ececec;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(0,0,0,.04);
+        transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+
+        .mat-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(24,39,75,.10);
+            border-color: #e6e9f5;
+        }
+
+        .mat-card.is-open {
+            border-color: #dfe3ff;
+            box-shadow: 0 8px 18px rgba(99,102,241,.12)
+        }
+
+    .mat-card__row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+    }
+
+    .mat-card__toggle {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        background: #f8fafc;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #334155;
+        flex: 0 0 34px
+    }
+
+        .mat-card__toggle:hover {
+            background: #eef2ff;
+            color: #4f46e5;
+            border-color: #d9ddff
+        }
+
+        .mat-card__toggle .chev {
+            transition: transform .15s ease
+        }
+
+        .mat-card__toggle[aria-expanded="true"] .chev {
+            transform: rotate(-180deg)
+        }
+
+    .mat-card__main {
+        flex: 1 1 auto;
+        min-width: 0
+    }
+
+    .mat-card__title {
+        font-weight: 700;
+        color: #111827;
+        letter-spacing: .2px
+    }
+
+    .mat-card__meta {
+        margin-top: .2rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .55rem;
+        align-items: center;
+        color: #6b7280;
+        font-size: .92rem
+    }
+
+        .mat-card__meta .meta-chunk {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            min-width: 0
+        }
+
+    /* Right side: badges + actions align on same row */
+    .mat-card__right {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        margin-left: auto;
+        flex-wrap: wrap;
+    }
+
+    .mat-badges {
+        display: flex;
+        gap: .4rem;
+        align-items: center;
+        margin-right: .25rem;
+    }
+
+    .mat-card__actions {
+        display: flex;
+        gap: .5rem
+    }
+
+    @@media (max-width: 576px) {
+        .mat-card__right
+
+    {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: .35rem
+    }
+
+    .mat-badges {
+        display: none
+    }
+    /* hide pills on small screens */
+    }
+
+    .mat-content {
+        border-top: 1px dashed #eef2f7
+    }
+
+    .mat-card__body {
+        padding: 14px
+    }
+
+    .mat-divider {
+        border: none;
+        border-top: 1px dashed #e9edf9;
+        margin: 12px 0
+    }
+
+    .mat-index {
+        padding: 10px 12px;
+        background: #fafbff;
+        border: 1px solid #eef2ff;
+        border-radius: 10px
+    }
+
+    /* Truncate description nicely */
+    .text-truncate {
+        max-width: 42rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis
+    }
+
+    /* Neutralize button ripple-in-collapse */
+    .mat-action {
+        position: relative;
+        z-index: 2
+    }
+</style>
 
 @section Scripts {
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-          document.querySelectorAll('.mat-action').forEach(el=>{
-            el.addEventListener('click', e=>e.stopPropagation());
-            el.addEventListener('mousedown', e=>e.stopPropagation());
-          });
-
-          document.querySelectorAll('.mat-card').forEach(card=>{
-            const btn = card.querySelector('.mat-toggle');
-            const id  = btn?.getAttribute('aria-controls');
-            const tgt = id ? document.getElementById(id) : null;
-            if(!btn || !tgt) return;
-
-            btn.addEventListener('click', function(e){
-              if(e.target.closest('.mat-action')) return;
-              const inst = bootstrap.Collapse.getOrCreateInstance(tgt);
-              inst.toggle();
-            });
-
-            tgt.addEventListener('show.bs.collapse', ()=>btn.setAttribute('aria-expanded','true'));
-            tgt.addEventListener('hide.bs.collapse', ()=>btn.setAttribute('aria-expanded','false'));
-          });
-        });
-
-        document.addEventListener('DOMContentLoaded', function () {
+        // Stop propagation for action buttons so they don't toggle collapse
+        document.addEventListener('DOMContentLoaded', function(){
           document.querySelectorAll('#materialsList .mat-action').forEach(el=>{
             ['click','mousedown'].forEach(ev=>el.addEventListener(ev, e=>e.stopPropagation()));
           });
 
-          document.querySelectorAll('#materialsList .mat-content').forEach(sec=>{
-            sec.addEventListener('shown.bs.collapse', ()=>{
-              sec.closest('.mat-card')?.classList.add('is-open');
+          // Toggle chevron + open style
+          document.querySelectorAll('#materialsList .mat-card').forEach(card=>{
+            const btn = card.querySelector('.mat-card__toggle');
+            const id  = btn?.getAttribute('data-bs-target') || btn?.getAttribute('aria-controls');
+            const tgt = id ? document.querySelector(id.startsWith('#') ? id : ('#'+id)) : null;
+            if(!btn || !tgt) return;
+
+            tgt.addEventListener('shown.bs.collapse', ()=>{
+              btn.setAttribute('aria-expanded','true');
+              card.classList.add('is-open');
             });
-            sec.addEventListener('hidden.bs.collapse', ()=>{
-              sec.closest('.mat-card')?.classList.remove('is-open');
+            tgt.addEventListener('hidden.bs.collapse', ()=>{
+              btn.setAttribute('aria-expanded','false');
+              card.classList.remove('is-open');
             });
           });
-        });
 
-        document.addEventListener('DOMContentLoaded', ()=> {
-            document.body.classList.add('materials-page');
-        });
+          // Client-side search
+          const q = document.getElementById('q');
+          const rows = Array.from(document.querySelectorAll('#materialsList .mat-card'));
+          const count = document.getElementById('matCount');
 
-        document.addEventListener('DOMContentLoaded', ()=>{
-          document.body.style.removeProperty('padding-right');
-          document.querySelectorAll('.modal-backdrop').forEach(b=>b.remove());
-        });
+          function filter(){
+            const term = (q.value || '').trim().toLowerCase();
+            let visible = 0;
+            rows.forEach(r=>{
+              const t = r.getAttribute('data-title') || '';
+              const d = r.getAttribute('data-desc') || '';
+              const show = !term || t.includes(term) || d.includes(term);
+              r.style.display = show ? '' : 'none';
+              if(show) visible++;
+            });
+            if(count) count.textContent = String(visible);
+          }
 
+          if(q){ q.addEventListener('input', filter, {passive:true}); }
+        });
     </script>
 }

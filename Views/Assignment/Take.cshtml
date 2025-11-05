@@ -10,20 +10,20 @@
     .take-wrap {
         display: grid;
         grid-template-columns: 260px 1fr;
-        min-height: 100dvh;
+        min-height: 100dvh
     }
 
         .take-wrap > section {
             display: flex;
             flex-direction: column;
-            min-height: 100dvh;
+            min-height: 100dvh
         }
 
     .qnav {
         background: #f8fafc;
         border-right: 1px solid #e5e7eb;
         padding: 16px;
-        overflow: auto;
+        overflow: auto
     }
 
         .qnav h6 {
@@ -50,7 +50,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        transition: transform .12s, box-shadow .12s, border-color .12s;
+        transition: transform .12s,box-shadow .12s,border-color .12s
     }
 
         .qitem:hover {
@@ -109,11 +109,11 @@
         font-weight: 700
     }
 
-    /* Progress bar dưới header */
+    /* Progress */
     .qprogress {
         height: 6px;
         background: rgba(255,255,255,.25);
-        margin: 6px 24px 0 24px;
+        margin: 6px 24px 0;
         border-radius: 999px;
         overflow: hidden
     }
@@ -125,11 +125,11 @@
             transition: width .15s ease
         }
 
-    /* Nội dung câu hỏi */
+    /* Question content */
     .qcontent {
         padding: 22px 28px;
         flex: 1 1 auto;
-        padding-bottom: 90px !important;
+        padding-bottom: 90px !important
     }
 
     .qtitle-row {
@@ -157,7 +157,7 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        transition: border-color .12s, box-shadow .12s;
+        transition: border-color .12s,box-shadow .12s
     }
 
         .opt:hover {
@@ -170,7 +170,7 @@
         }
 
     .qcontent > :last-child {
-        margin-bottom: 0 !important;
+        margin-bottom: 0 !important
     }
 
     .essay-box {
@@ -181,10 +181,15 @@
         padding: 12px 14px
     }
 
-    /* Bottom bar bám đáy viewport */
+    /* Anti-select */
+    .qpanel .qtitle-row, .qpanel .opt, .qpanel .q-pts {
+        user-select: none
+    }
+
+    /* Bottom bar */
     .take-bar {
         position: fixed;
-        left: 260px; /* bằng độ rộng sidebar */
+        left: 260px;
         right: 0;
         bottom: 0;
         z-index: 1030;
@@ -194,7 +199,7 @@
         padding: 14px 20px;
         display: grid;
         grid-template-columns: 1fr auto auto;
-        gap: 10px;
+        gap: 10px
     }
 
         .take-bar .left-slot {
@@ -227,6 +232,11 @@
         padding: 10px 16px
     }
 
+        .btn-next:disabled {
+            opacity: .35;
+            filter: grayscale(10%)
+        }
+
     .btn-finish {
         background: #64748b;
         border: 0;
@@ -237,33 +247,39 @@
 
     html, body {
         height: 100%;
-        margin: 0;
+        margin: 0
     }
 
     :where(.container).py-3 {
-        padding-bottom: 0 !important;
+        padding-bottom: 0 !important
     }
 
     .take-wrap {
-        padding-bottom: 0 !important;
+        padding-bottom: 0 !important
     }
 
         .take-wrap > section {
-            margin-bottom: 0 !important;
+            margin-bottom: 0 !important
         }
 
-    /* Responsive: khi sidebar collapse thì thanh phủ full chiều ngang */
-    @@media (max-width: 991px) {
-        .take-wrap
-
-    {
-        grid-template-columns: 1fr;
+    .modal-danger .modal-header {
+        background: #ef4444;
+        color: #fff
     }
 
-    .take-bar {
-        left: 0;
+    .modal-warn .modal-header {
+        background: #f59e0b;
+        color: #fff
     }
 
+    @@media (max-width:991px) {
+        .take-wrap {
+            grid-template-columns: 1fr
+        }
+
+        .take-bar {
+            left: 0
+        }
     }
 </style>
 
@@ -277,8 +293,6 @@
 
     var startIso = startUtc.ToString("yyyy-MM-ddTHH:mm:ss.fff'Z'");
     var dueIso = dueUtc.ToString("yyyy-MM-ddTHH:mm:ss.fff'Z'");
-
-    var pointsArr = Model.Questions.Select(q => (int)Math.Round(q.Points)).ToArray();
 }
 
 <div class="take-wrap" id="takeRoot" data-attempt="@Model.AttemptId">
@@ -355,14 +369,74 @@
             </div>
             <div class="right-slot">
                 <button id="btnNext" class="btn-next">Next</button>
-                <form asp-action="Finish" asp-controller="Assignment" method="post" class="m-0">
+
+                <form id="finishForm" asp-action="Finish" asp-controller="Assignment" method="post" class="m-0">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="attemptId" value="@Model.AttemptId" />
-                    <button type="submit" class="btn-finish">Finish</button>
+                    <button type="button" id="btnFinish" class="btn-finish">Finish</button>
                 </form>
             </div>
         </div>
     </section>
+</div>
+
+<!-- ===== Modal: Confirm finish ===== -->
+<div class="modal fade" id="confirmFinishModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header modal-warn">
+                <h5 class="modal-title"><i class="bi bi-flag"></i> Submit this attempt?</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Are you sure you want to finish and submit your answers?</p>
+                <div class="small text-muted">You cannot change answers after submission.</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-soft" data-bs-dismiss="modal">Continue working</button>
+                <button id="confirmFinishBtn" class="btn btn-primary"><i class="bi bi-check2-circle"></i> Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Modal: Time up (auto-submit) ===== -->
+<div class="modal fade" id="timeUpModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header modal-danger">
+                <h5 class="modal-title"><i class="bi bi-hourglass-split"></i> Time is up</h5>
+            </div>
+            <div class="modal-body">
+                <p class="mb-1">Your time has ended. The attempt will be submitted automatically.</p>
+                <div class="small text-muted">Submitting in <span id="timeupCountdown">2</span> seconds…</div>
+            </div>
+            <div class="modal-footer">
+                <button id="submitNowBtn" class="btn btn-danger">Submit now</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Modal: Anti-cheat warning ===== -->
+<div class="modal fade" id="antiCheatModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header modal-warn">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Suspicious activity detected</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="antiCheatMsg" class="mb-2">Please keep the test window focused and avoid taking screenshots.</div>
+                <div class="small text-muted">
+                    After <strong>2 confirmations</strong>, your attempt will be auto-submitted.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="antiCheatConfirmBtn" class="btn btn-soft" data-bs-dismiss="modal">I understand</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -371,30 +445,64 @@
       const attemptId = Number(root.dataset.attempt);
       const qPanels   = Array.from(document.querySelectorAll('.qpanel'));
       const qItems    = Array.from(document.querySelectorAll('.qitem'));
-      const total     = @qTotal;
+      const total     = @Model.Questions.Count;
       let index       = @Model.CurrentIndex;
 
-      // Timer
+      /* ===== Timer with time-up modal & auto-submit ===== */
       const startAt = new Date('@startIso');
       const dueAt   = new Date('@dueIso');
       const timerEl = document.getElementById('timer');
+      let timeUpShown = false;
+      const finishForm = document.getElementById('finishForm');
+
+      function submitAttempt(){
+        if (submitted) return;
+        submitted = true;
+        finishForm.submit();
+      }
+
+      function showTimeUp(){
+        if (timeUpShown) return;
+        timeUpShown = true;
+        const modalEl = document.getElementById('timeUpModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl, {backdrop:'static', keyboard:false});
+        modal.show();
+
+        let t = 2; // seconds
+        const cEl = document.getElementById('timeupCountdown');
+        cEl.textContent = String(t);
+        const tick = setInterval(()=>{
+          t -= 1;
+          cEl.textContent = String(Math.max(0,t));
+          if (t<=0){
+            clearInterval(tick);
+            submitAttempt();
+          }
+        }, 1000);
+
+        document.getElementById('submitNowBtn').addEventListener('click', submitAttempt, { once:true });
+      }
+
       function tick(){
         const now = new Date();
         let s = Math.max(0, Math.floor((dueAt - now)/1000));
         const m  = String(Math.floor(s/60)).padStart(2,'0');
         const ss = String(s%60).padStart(2,'0');
         timerEl.textContent = `${m}:${ss}`;
-        if(s<=0){ document.querySelector('.btn-finish')?.click(); }
+        if(s<=0){ showTimeUp(); }
         else { requestAnimationFrame(tick); }
       }
       requestAnimationFrame(tick);
 
-      // Progress
+      /* ===== Progress + Prev/Next ===== */
       const answeredCountEl = document.getElementById('answeredCount');
       const progEl = document.getElementById('qProgBar');
+      const btnPrev = document.getElementById('btnPrev');
+      const btnNext = document.getElementById('btnNext');
+
       function updateButtons(){
-        document.getElementById('btnPrev').disabled = index<=0;
-        document.getElementById('btnNext').disabled = index>=total-1;
+        btnPrev.disabled = index<=0;
+        btnNext.disabled = index>=total-1;
       }
       function updateProgress(i){
         const pct = total>1 ? Math.round((i/(total-1))*100) : 100;
@@ -407,12 +515,11 @@
       }
       updateButtons();
 
-      // Nav
       qItems.forEach(li=> li.addEventListener('click', ()=> show(Number(li.dataset.index)), {passive:true}));
-      document.getElementById('btnPrev').addEventListener('click', ()=>{ if(index>0) show(index-1); }, {passive:true});
-      document.getElementById('btnNext').addEventListener('click', ()=>{ if(index<total-1) show(index+1); }, {passive:true});
+      btnPrev.addEventListener('click', ()=>{ if(index>0) show(index-1); }, {passive:true});
+      btnNext.addEventListener('click', ()=>{ if(index<total-1) show(index+1); }, {passive:true});
 
-      // Save answer (debounced)
+      /* ===== Save answer (debounced) ===== */
       let debounceId=null;
       const save = (payload)=>
         fetch('@Url.Action("SaveAnswer", "Assignment")', {
@@ -449,5 +556,79 @@
 
       show(index);
       window.onbeforeunload = null;
+
+      /* ===== Finish confirm modal ===== */
+      document.getElementById('btnFinish').addEventListener('click', ()=>{
+        const m = bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmFinishModal'));
+        m.show();
+      });
+      let submitted = false;
+      document.getElementById('confirmFinishBtn').addEventListener('click', (e)=>{
+        e.preventDefault();
+        submitAttempt();
+      });
+
+      /* ===== Anti-cheat ===== */
+      let warnings = 0;
+      let antiOpen = false;
+      let lastReason = '';
+      const antiModalEl = document.getElementById('antiCheatModal');
+      const antiMsgEl   = document.getElementById('antiCheatMsg');
+      const antiBtn     = document.getElementById('antiCheatConfirmBtn');
+
+      function showAnti(reason){
+        lastReason = reason;
+        antiMsgEl.textContent = reason + (warnings >= 1 ? ' (next confirmation will auto-submit)' : '');
+        const m = bootstrap.Modal.getOrCreateInstance(antiModalEl, {backdrop:'static', keyboard:false});
+        if (!antiOpen) { m.show(); antiOpen = true; }
+      }
+
+      // Khi người dùng BẤM xác nhận mới tăng warnings
+      antiBtn.addEventListener('click', ()=>{
+        warnings++;
+        antiOpen = false;
+        if (warnings >= 2){
+          setTimeout(()=> submitAttempt(), 300);
+        }
+      });
+
+      antiModalEl.addEventListener('hidden.bs.modal', ()=>{ antiOpen = false; });
+
+      // 1) Chuyển tab / mất focus
+      document.addEventListener('visibilitychange', ()=>{
+        if (document.visibilityState === 'hidden') showAnti('We detected the test lost focus / switched tab.');
+      });
+      window.addEventListener('blur', ()=>{
+        if (!document.body.classList.contains('modal-open')) showAnti('We detected the window lost focus.');
+      });
+
+      // 2) Phím chụp màn hình
+      document.addEventListener('keydown', (e)=>{
+        if (e.key && (e.key.toLowerCase()==='printscreen' || e.key.toLowerCase()==='snapshot')){
+          e.preventDefault();
+          showAnti('Screenshot attempt (PrintScreen) detected.');
+        }
+        if ((e.shiftKey && (e.metaKey || e.ctrlKey)) && (e.key.toLowerCase()==='s')){
+          e.preventDefault();
+          showAnti('Screen snip shortcut detected.');
+        }
+      });
+
+
+      const qcontent = document.querySelector('.qcontent');
+      qcontent.addEventListener('contextmenu', (e)=>{
+        if (e.target.closest('.essay-box')) return;
+        e.preventDefault();
+      });
+      document.addEventListener('copy', (e)=>{
+        const sel = window.getSelection();
+        if (!sel) return;
+        const anchor = sel.anchorNode && (sel.anchorNode.nodeType===1 ? sel.anchorNode : sel.anchorNode.parentElement);
+        if (anchor && qcontent.contains(anchor) && !anchor.closest('.essay-box')){
+          e.preventDefault();
+          showAnti('Copy action is not allowed on questions/choices.');
+        }
+      });
+
     })();
 </script>

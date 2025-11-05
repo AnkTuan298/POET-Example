@@ -1,5 +1,10 @@
-﻿@{
-    if (ViewData.TryGetValue("ParentLayout", out var parentLayout) && parentLayout !=  null)
+﻿@using Microsoft.AspNetCore.Identity
+@using POETWeb.Models
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    if (ViewData.TryGetValue("ParentLayout", out var parentLayout) && parentLayout != null)
     {
         Layout = parentLayout.ToString();
     }
@@ -7,11 +12,96 @@
     {
         Layout = "/Areas/Identity/Pages/_Layout.cshtml";
     }
+
+    string homeController = "Student";
+    string homeAction = "Index";
+    string displayName = "User";
+    string avatarUrl = Url.Content("~/images/avatar-default.png");
+
+    if (SignInManager.IsSignedIn(User))
+    {
+        var me = await UserManager.GetUserAsync(User);
+        if (me != null)
+        {
+            // Prefer last name only
+            var rawName = !string.IsNullOrWhiteSpace(me.FullName) ? me.FullName! : (me.UserName ?? "User");
+            var parts = rawName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            displayName = parts.Length > 0 ? parts[^1] : rawName;
+
+            if (!string.IsNullOrWhiteSpace(me.AvatarUrl))
+                avatarUrl = Url.Content(me.AvatarUrl);
+
+            // Role-based home
+            var isTeacher = await UserManager.IsInRoleAsync(me, "Teacher");
+            homeController = isTeacher ? "Teacher" : "Student";
+        }
+    }
 }
 
-<h1>Manage your account</h1>
+<nav class="navbar navbar-expand-lg lp-nav bg-white shadow-sm sticky-top py-3">
+    <div class="container-xxl px-4">
+        <!-- Brand -->
+        <a class="navbar-brand d-inline-flex align-items-center"
+           asp-controller="@homeController" asp-action="@homeAction" aria-label="POET Home">
+            <img src="@Url.Content("~/LOGO/POETLOGO.png")"
+                 alt="POET" class="brand-logo" />
+        </a>
 
-<div>
+        <!-- Toggler -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#accountNav" aria-controls="accountNav"
+                aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Collapse -->
+        <div class="collapse navbar-collapse" id="accountNav">
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+                <!-- Explicit Home button to match brand route -->
+                <li class="nav-item">
+                    <a class="btn btn-soft-slate btn-sm"
+                       asp-controller="@homeController" asp-action="@homeAction">
+                        <i class="bi bi-house-door"></i> Home
+                    </a>
+                </li>
+
+                <!-- User menu -->
+                <li class="nav-item">
+                    <div class="user-menu ms-lg-2">
+                        <button class="user-trigger user-trigger--pill" id="userTrigger"
+                                type="button" aria-haspopup="true" aria-expanded="false"
+                                aria-controls="userPanel">
+                            <span class="user-pill">
+                                <img src="@avatarUrl"
+                                     alt="Avatar"
+                                     class="avatar-round"
+                                     onerror="this.onerror=null;this.src='@Url.Content("~/images/avatar-default.png")';" />
+                                <span class="user-name">@displayName</span>
+                                <svg class="chev" width="14" height="14" viewBox="0 0 20 20" aria-hidden="true">
+                                    <path d="M5 7l5 6 5-6z" fill="currentColor" />
+                                </svg>
+                            </span>
+                        </button>
+
+                        <div class="user-panel" id="userPanel" role="menu" aria-label="Account menu" hidden>
+                            <div class="user-panel__cap"></div>
+                            <div class="user-panel__header">@displayName</div>
+
+                            <a class="user-item" role="menuitem"
+                               asp-area="Identity" asp-page="/Account/Manage/Index">Profile</a>
+
+                            <form class="m-0" asp-area="Identity" asp-page="/Account/Logout" method="post">
+                                <button type="submit" class="user-item-btn" role="menuitem">Log out</button>
+                            </form>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container-xxl px-4 py-3">
     <h2>Change your account settings</h2>
     <hr />
     <div class="row">
@@ -27,4 +117,167 @@
 @section Scripts {
     @RenderSection("Scripts", required: false)
 
+    <script>
+        (function(){
+          const trigger = document.getElementById('userTrigger');
+          const panel   = document.getElementById('userPanel');
+          if(!trigger || !panel) return;
+
+          let open = false;
+          function setOpen(v){
+            open = !!v;
+            trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if(open){
+              panel.removeAttribute('hidden');
+              panel.classList.add('is-open');
+            }else{
+              panel.setAttribute('hidden','');
+              panel.classList.remove('is-open');
+            }
+          }
+
+          // Toggle panel
+          trigger.addEventListener('click', (e)=>{ e.stopPropagation(); setOpen(!open); });
+          document.addEventListener('click', (e)=>{
+            if(!open) return;
+            if(e.target === trigger || trigger.contains(e.target) || panel.contains(e.target)) return;
+            setOpen(false);
+          });
+          document.addEventListener('keydown', (e)=>{
+            if(open && e.key === 'Escape'){ setOpen(false); trigger.focus(); }
+          });
+
+          // Close navbar collapse when clicking any link inside (mobile)
+          const navbar = document.getElementById('accountNav');
+          if (navbar) {
+            navbar.addEventListener('click', (e)=>{
+              const a = e.target.closest('a');
+              if(!a) return;
+              const inst = bootstrap.Collapse.getOrCreateInstance(navbar, { toggle:false });
+              if(inst) inst.hide();
+            });
+          }
+        })();
+    </script>
+
+    <style>
+        /* Brand logo heights for consistency */
+        .brand-logo {
+            height: 52px;
+            width: auto;
+            display: block;
+        }
+        @@media (min-width: 768px) {
+            .brand-logo
+
+        {
+            height: 36px;
+        }
+
+        }
+
+        /* Soft button reused */
+        .btn-soft-slate {
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            color: #1f2937;
+        }
+
+            .btn-soft-slate:hover {
+                background: #eef2f7;
+                color: #111827;
+            }
+
+        /* User menu (pill style, identical to teacher/student header) */
+        .user-menu {
+            position: relative;
+        }
+
+        .user-trigger--pill {
+            background: transparent;
+            border: 0;
+            padding: 0;
+        }
+
+        .user-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            padding: .25rem .75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 9999px;
+            box-shadow: 0 6px 18px rgba(99,102,241,.12);
+            background: #fff;
+        }
+
+        .avatar-round {
+            width: 32px;
+            height: 32px;
+            border-radius: 9999px;
+            object-fit: cover;
+            background: #f3f4f6;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 2px #e5e7eb inset;
+        }
+
+        .user-name {
+            max-width: 14rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-menu .chev {
+            opacity: .8;
+        }
+
+        .user-panel {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 8px);
+            min-width: 220px;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            box-shadow: 0 10px 24px rgba(0,0,0,.12);
+            z-index: 1100;
+            padding: .5rem;
+        }
+
+        .user-panel__cap {
+            position: absolute;
+            right: 16px;
+            top: -8px;
+            width: 16px;
+            height: 16px;
+            transform: rotate(45deg);
+            background: #fff;
+            border-left: 1px solid #e5e7eb;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .user-panel__header {
+            font-weight: 700;
+            color: #111827;
+            padding: .25rem .25rem .5rem;
+            border-bottom: 1px dashed #eef2f7;
+            margin-bottom: .25rem;
+        }
+
+        .user-item, .user-item-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: .5rem .5rem;
+            border-radius: 8px;
+            background: transparent;
+            border: 0;
+            color: #111827;
+            text-decoration: none;
+        }
+
+            .user-item:hover, .user-item-btn:hover {
+                background: #f8fafc;
+            }
+    </style>
 }
