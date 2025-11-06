@@ -288,31 +288,34 @@
           const finalChip = document.getElementById('finalChip');
           const finalProg = document.getElementById('finalProgress');
 
-          const mcqScore = @Model.McqScore.ToString("0.##", CultureInfo.InvariantCulture);
-          const essayMax = @Model.EssayMax.ToString("0.##", CultureInfo.InvariantCulture);
-          const finalMax = @Model.FinalMax.ToString("0.##", CultureInfo.InvariantCulture);
+          const mcqScore = @Model.McqScore.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+          const essayMax = @Model.EssayMax.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+          const finalMax = @Model.FinalMax.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 
           const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
           function recalc(){
             let essaySum = 0;
             essayInputs.forEach(i=>{
-              let v = parseFloat(i.value);
+              const raw = (i.value || "").replace(',', '.');
+              let v = parseFloat(raw);
               if(isNaN(v)) v = 0;
-              const m = parseFloat(i.dataset.max || "0");
+              const m = parseFloat((i.dataset.max || "0").replace(',', '.'));
               v = clamp(v, 0, m);
               essaySum += v;
             });
 
-            const essayPct = essayMax > 0 ? clamp(Math.round(essaySum/essayMax*100),0,100) : 0;
-            essayChip.textContent = (Math.round(essaySum*100)/100).toString();
-            essayProg.style.width = essayPct + "%";
+            const eMax = parseFloat(essayMax);
+            const fMax = parseFloat(finalMax);
+            const essayPct = eMax > 0 ? clamp(Math.round(essaySum/eMax*100),0,100) : 0;
+            essayChip && (essayChip.textContent = (Math.round(essaySum*100)/100).toString());
+            essayProg && (essayProg.style.width = essayPct + "%");
 
-            let final = mcqScore + essaySum;
-            final = clamp(final, 0, finalMax);
-            const finalPct = finalMax > 0 ? clamp(Math.round(final/finalMax*100),0,100) : 0;
-            finalChip.textContent = (Math.round(final*100)/100).toString();
-            finalProg.style.width = finalPct + "%";
+            let final = parseFloat(mcqScore) + essaySum;
+            final = clamp(final, 0, fMax);
+            const finalPct = fMax > 0 ? clamp(Math.round(final/fMax*100),0,100) : 0;
+            finalChip && (finalChip.textContent = (Math.round(final*100)/100).toString());
+            finalProg && (finalProg.style.width = finalPct + "%");
           }
 
           essayInputs.forEach(i => i.addEventListener('input', recalc));
@@ -321,11 +324,8 @@
           // ===== unsaved changes guard =====
           const form = document.getElementById('gradeForm');
           let dirty = false;
-
-          // Đánh dấu bẩn khi có thay đổi
           form?.addEventListener('input', () => { dirty = true; });
 
-          // Hàm tắt guard
           function markClean() {
             dirty = false;
             window.onbeforeunload = null;
@@ -337,13 +337,19 @@
             e.returnValue = '';
           };
 
-          form?.addEventListener('submit', markClean, { capture: true });
+          form?.addEventListener('submit', (ev) => {
+            essayInputs.forEach(i => {
+              if (!i.value) return;
+              i.value = i.value.replace(',', '.');
+            });
+            markClean();
+          }, { capture: true });
 
           document.addEventListener('click', (e) => {
             const a = e.target.closest('a[data-nodirty]');
             if (a) markClean();
           }, { capture: true });
-
         })();
     </script>
 }
+
