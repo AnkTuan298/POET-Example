@@ -81,7 +81,7 @@
                             </div>
                             <div class="matc-box__body">
                                 <div id="dropZone" class="matc-drop">
-                                    <input id="fileInput" name="file" type="file" class="visually-hidden" />
+                                    <input id="fileInput" name="file" type="file" class="file-input-ghost" />
                                     <div class="matc-drop__icon"><i class="bi bi-cloud-arrow-up"></i></div>
                                     <div class="matc-drop__text">
                                         <strong>Drag & drop</strong> a file here, or
@@ -251,134 +251,166 @@
         margin-bottom: .35rem
     }
 
-    .visually-hidden {
-        position: absolute !important;
-        left: -9999px !important;
+    .file-input-ghost {
+        position: absolute;
         width: 1px;
         height: 1px;
-        overflow: hidden
+        opacity: 0;
+        outline: 0;
+        border: 0;
+        padding: 0;
+        margin: 0;
     }
 </style>
-
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        // utilities
-        function bytesToKB(b){ return Math.round((b || 0)/1024).toLocaleString() + ' KB'; }
+        // utils
+        function bytesToKB(b){ return Math.round((b||0)/1024).toLocaleString() + ' KB'; }
 
-        // YouTube preview
+        // ===== YouTube preview =====
         (function(){
-            const url = document.getElementById('urlInput');
-            const wrap = document.getElementById('urlPreview');
-            const frame = document.getElementById('ytFrame');
+          const url = document.getElementById('urlInput');
+          const wrap = document.getElementById('urlPreview');
+          const frame = document.getElementById('ytFrame');
 
-            function getYoutubeId(u){
-                try{
-                    const x = new URL(u);
-                    if (x.hostname.includes('youtube.com')) return new URLSearchParams(x.search).get('v') || '';
-                    if (x.hostname.includes('youtu.be')) return x.pathname.replace('/','');
-                }catch{}
-                return '';
-            }
-
-            function update(){
-                const id = getYoutubeId(url.value.trim());
-                if(id){
-                    frame.src = 'https://www.youtube.com/embed/' + id;
-                    wrap.classList.remove('d-none');
-                }else{
-                    frame.removeAttribute('src');
-                    wrap.classList.add('d-none');
-                }
-                refreshPills();
-            }
-
-            url?.addEventListener('input', update, {passive:true});
-            update();
+          function getYoutubeId(u){
+            try{
+              const x = new URL(u);
+              if (x.hostname.includes('youtube.com')) return new URLSearchParams(x.search).get('v') || '';
+              if (x.hostname.includes('youtu.be')) return x.pathname.replace('/','');
+            }catch{}
+            return '';
+          }
+          function update(){
+            try{
+              const id = getYoutubeId(url?.value?.trim() || '');
+              if(id){
+                frame.src = 'https://www.youtube.com/embed/' + id;
+                wrap?.classList.remove('d-none');
+              }else{
+                frame?.removeAttribute('src');
+                wrap?.classList.add('d-none');
+              }
+            }finally{ window.refreshPills && window.refreshPills(); }
+          }
+          url?.addEventListener('input', update, {passive:true});
+          update();
         })();
 
-        // Drag & drop upload
+        // ===== File upload: browse + click zone + drag&drop =====
         (function(){
-            const dz = document.getElementById('dropZone');
-            const fi = document.getElementById('fileInput');
-            const btn = document.getElementById('browseBtn');
-            const info = document.getElementById('fileInfo');
-            const nameEl = document.getElementById('fileName');
-            const sizeEl = document.getElementById('fileSize');
-            const clearBtn = document.getElementById('clearFile');
+          const dz = document.getElementById('dropZone');
+          const fi = document.getElementById('fileInput');
+          const btn = document.getElementById('browseBtn');
+          const info = document.getElementById('fileInfo');
+          const nameEl = document.getElementById('fileName');
+          const sizeEl = document.getElementById('fileSize');
+          const clearBtn = document.getElementById('clearFile');
 
-            function showFile(f){
-                if(!f){ info.classList.add('d-none'); nameEl.textContent='—'; sizeEl.textContent=''; return; }
-                nameEl.textContent = f.name;
-                sizeEl.textContent = '(' + bytesToKB(f.size) + ')';
-                info.classList.remove('d-none');
+          function showFile(f){
+            if(!f){
+              info?.classList.add('d-none');
+              nameEl && (nameEl.textContent='—');
+              sizeEl && (sizeEl.textContent='');
+              return;
             }
+            nameEl && (nameEl.textContent = f.name);
+            sizeEl && (sizeEl.textContent = '(' + bytesToKB(f.size) + ')');
+            info?.classList.remove('d-none');
+          }
 
-            btn?.addEventListener('click', ()=>fi.click());
-            clearBtn?.addEventListener('click', ()=>{ fi.value=''; showFile(null); refreshPills(); });
+          // mở hộp thoại file
+          function openPicker(){
+            // đảm bảo input KHÔNG display:none / visibility:hidden
+            fi?.focus();
+            fi?.click();
+          }
+          btn?.addEventListener('click', openPicker);
+          // click vào vùng drop cũng mở picker
+          dz?.addEventListener('click', function(e){
+            const isButton = e.target.closest('#browseBtn');
+            if(!isButton) openPicker();
+          });
 
-            fi?.addEventListener('change', ()=>{
-                showFile(fi.files?.[0] || null);
-                refreshPills();
-            });
+          clearBtn?.addEventListener('click', ()=>{
+            if (fi) { fi.value=''; }
+            showFile(null);
+            window.refreshPills && window.refreshPills();
+          });
 
-            ['dragenter','dragover'].forEach(ev=>{
-                dz.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dz.classList.add('dragover'); }, false);
-            });
-            ['dragleave','drop'].forEach(ev=>{
-                dz.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dz.classList.remove('dragover'); }, false);
-            });
-            dz.addEventListener('drop', e=>{
-                if(e.dataTransfer?.files?.length){
-                    fi.files = e.dataTransfer.files;
-                    showFile(fi.files[0]);
-                    refreshPills();
-                }
-            });
+          fi?.addEventListener('change', ()=>{
+            showFile(fi.files?.[0] || null);
+            window.refreshPills && window.refreshPills();
+          });
+
+          // drag & drop
+          ['dragenter','dragover'].forEach(ev=>{
+            dz?.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dz.classList.add('dragover'); }, false);
+          });
+          ['dragleave','drop'].forEach(ev=>{
+            dz?.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dz.classList.remove('dragover'); }, false);
+          });
+          dz?.addEventListener('drop', e=>{
+            const files = e.dataTransfer?.files;
+            if(files && files.length){
+              // Gán file vào input để submit lên server
+              try { fi.files = files; } catch {}
+              showFile(files[0]);
+              window.refreshPills && window.refreshPills();
+            }
+          });
         })();
 
-        // Index char counter + pill summaries + enable Create
+        // ===== Pills + enable/disable Create =====
         (function(){
-            const title = document.getElementById('Title');
-            const url = document.getElementById('urlInput');
-            const file = document.getElementById('fileInput');
-            const index = document.getElementById('indexInput');
-            const count = document.getElementById('indexCount');
-            const btn = document.getElementById('btnCreate');
+          const title = document.getElementById('Title');
+          const url = document.getElementById('urlInput');
+          const file = document.getElementById('fileInput');
+          const index = document.getElementById('indexInput');
+          const count = document.getElementById('indexCount');
+          const btn = document.getElementById('btnCreate');
 
-            const pillTitle = document.getElementById('pillTitle');
-            const pillUrl = document.getElementById('pillUrl');
-            const pillFile = document.getElementById('pillFile');
-            const pillIndex = document.getElementById('pillIndex');
+          const pillTitle = document.getElementById('pillTitle');
+          const pillUrl = document.getElementById('pillUrl');
+          const pillFile = document.getElementById('pillFile');
+          const pillIndex = document.getElementById('pillIndex');
 
-            function niceLen(s){ return (s||'').length.toLocaleString(); }
+          function niceLen(s){ return (s||'').length.toLocaleString(); }
 
-            window.refreshPills = function(){
-                pillTitle.textContent = 'Title • ' + niceLen(title?.value);
-                pillUrl.className = (url?.value?.trim()? 'pill pill-indigo':'pill pill-gray');
-                pillFile.className = (file?.files?.length? 'pill pill-emerald':'pill pill-gray');
-                pillIndex.textContent = 'Index • ' + niceLen(index?.value);
-                pillIndex.className = (index?.value?.trim()? 'pill pill-sky':'pill pill-gray');
+          window.refreshPills = function(){
+            const t = title?.value?.trim() || '';
+            const u = url?.value?.trim() || '';
+            const f = (file?.files && file.files.length) ? file.files[0] : null;
+            const ix = index?.value?.trim() || '';
 
-                const hasContent = !!( (url&&url.value.trim()) || (file&&file.files&&file.files.length) || (index&&index.value.trim()) );
-                const hasTitle = !!(title && title.value.trim());
-                btn.disabled = !(hasTitle && hasContent);
-            };
-
-            function updateCount(){
-                count.textContent = (index?.value?.length || 0).toLocaleString() + ' chars';
+            if (pillTitle) pillTitle.textContent = 'Title • ' + niceLen(t);
+            if (pillUrl)   pillUrl.className   = u ? 'pill pill-indigo' : 'pill pill-gray';
+            if (pillFile)  pillFile.className  = f ? 'pill pill-emerald' : 'pill pill-gray';
+            if (pillIndex){
+              pillIndex.textContent = 'Index • ' + niceLen(ix);
+              pillIndex.className   = ix ? 'pill pill-sky' : 'pill pill-gray';
             }
 
-            ['input','change'].forEach(ev=>{
-                title?.addEventListener(ev, refreshPills, {passive:true});
-                url?.addEventListener(ev, refreshPills, {passive:true});
-                index?.addEventListener(ev, ()=>{ updateCount(); refreshPills(); }, {passive:true});
-                file?.addEventListener(ev, refreshPills, {passive:true});
-            });
+            const hasContent = !!(u || f || ix);
+            const hasTitle   = !!t;
+            if (btn) btn.disabled = !(hasTitle && hasContent);
+          };
 
-            // init
-            updateCount();
-            refreshPills();
+          function updateCount(){
+            if (count) count.textContent = ((index?.value?.length)||0).toLocaleString() + ' chars';
+          }
+
+          ['input','change'].forEach(ev=>{
+            title?.addEventListener(ev, refreshPills, {passive:true});
+            url?.addEventListener(ev, refreshPills, {passive:true});
+            index?.addEventListener(ev, ()=>{ updateCount(); refreshPills(); }, {passive:true});
+            file?.addEventListener(ev, refreshPills);
+          });
+
+          updateCount();
+          refreshPills();
         })();
     </script>
 }
+
