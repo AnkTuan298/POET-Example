@@ -20,7 +20,8 @@
                 </div>
             </div>
             <div class="d-flex gap-2">
-                <a asp-action="Submissions" asp-route-id="@Model.AssignmentId" class="btn btn-light btn-sm">
+                <a asp-action="Submissions" asp-route-id="@Model.AssignmentId"
+                   class="btn btn-light btn-sm" data-nodirty="1">
                     <i class="bi bi-arrow-left"></i> Back
                 </a>
             </div>
@@ -138,7 +139,8 @@
                                       placeholder="General feedback for this attempt">@Model.TeacherComment</textarea>
 
                             <div class="d-flex justify-content-end gap-2 mt-3">
-                                <a asp-action="Submissions" asp-route-id="@Model.AssignmentId" class="btn btn-soft">Cancel</a>
+                                <a asp-action="Submissions" asp-route-id="@Model.AssignmentId"
+                                   class="btn btn-soft" data-nodirty="1">Cancel</a>
                                 <button type="submit" class="btn btn-primary">
                                     <i class="bi bi-check2-circle"></i> Save grade
                                 </button>
@@ -278,7 +280,7 @@
 
 @section Scripts {
     <script>
-        (function(){
+        (function () {
           // live totals
           const essayInputs = Array.from(document.querySelectorAll('.essay-score'));
           const essayChip = document.getElementById('essaySumChip');
@@ -290,7 +292,7 @@
           const essayMax = @Model.EssayMax.ToString("0.##", CultureInfo.InvariantCulture);
           const finalMax = @Model.FinalMax.ToString("0.##", CultureInfo.InvariantCulture);
 
-          function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+          const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
           function recalc(){
             let essaySum = 0;
@@ -316,12 +318,32 @@
           essayInputs.forEach(i => i.addEventListener('input', recalc));
           recalc();
 
+          // ===== unsaved changes guard =====
+          const form = document.getElementById('gradeForm');
           let dirty = false;
-          document.getElementById('gradeForm').addEventListener('input', ()=>dirty=true);
-          window.addEventListener('beforeunload', function(e){
-            if(!dirty) return;
-            e.preventDefault(); e.returnValue = '';
-          });
+
+          // Đánh dấu bẩn khi có thay đổi
+          form?.addEventListener('input', () => { dirty = true; });
+
+          // Hàm tắt guard
+          function markClean() {
+            dirty = false;
+            window.onbeforeunload = null;
+          }
+
+          window.onbeforeunload = function(e){
+            if (!dirty) return;
+            e.preventDefault();
+            e.returnValue = '';
+          };
+
+          form?.addEventListener('submit', markClean, { capture: true });
+
+          document.addEventListener('click', (e) => {
+            const a = e.target.closest('a[data-nodirty]');
+            if (a) markClean();
+          }, { capture: true });
+
         })();
     </script>
 }
