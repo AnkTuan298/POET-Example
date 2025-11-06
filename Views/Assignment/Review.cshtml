@@ -10,14 +10,40 @@
             <div class="small opacity-75">Assignment review</div>
             <h4 class="mb-0">@Model.AssignmentTitle</h4>
         </div>
+
         @{
-            var backUrl = (string)(ViewBag.ReturnUrl ?? Url.Action("Student", "Assignment"));
+            var refUrl = Context?.Request?.Headers["Referer"].ToString();
+            string backUrl = null;
+
+            if (!string.IsNullOrWhiteSpace(refUrl)
+            && refUrl.Contains("/Assignment/Student", StringComparison.OrdinalIgnoreCase))
+            {
+                backUrl = refUrl;
+            }
+            else
+            {
+                var tryWithAssignment = Url.Action("Student", "Assignment", new { id = Model.AssignmentId });
+                var classIdObj = ViewBag.ClassId;
+                var tryWithClass = classIdObj != null
+                ? Url.Action("Student", "Assignment", new { classId = classIdObj })
+                : null;
+
+                backUrl = !string.IsNullOrEmpty(tryWithAssignment)
+                ? tryWithAssignment
+                : (!string.IsNullOrEmpty(tryWithClass) ? tryWithClass : null);
+                if (string.IsNullOrEmpty(backUrl))
+                {
+                    backUrl = Url.Action("Index", "Student");
+                }
+            }
         }
+
         <a href="@backUrl" class="btn btn-light btn-sm">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>
 </div>
+
 
 <div class="container-xxl py-3">
     @if (TempData["Warn"] != null)
